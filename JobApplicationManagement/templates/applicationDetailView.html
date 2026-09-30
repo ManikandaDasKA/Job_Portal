@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .detail-card {
+        max-width: 700px;
+        margin: 50px auto;
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+        border: 1px solid #e5e7eb;
+    }
+    .status-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+    .badge {
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-weight: bold;
+        font-size: 13px;
+    }
+    .Pending { background: #fef3c7; color: #92400e; }
+    .Accepted { background: #d1fae5; color: #065f46; }
+    .Rejected { background: #fee2e2; color: #991b1b; }
+</style>
+
+<div class="detail-card" id="app-content">
+    <p style="text-align:center;">Loading details...</p>
+</div>
+
+<script>
+    async function loadDetail() {
+        // Get the ID from the URL (e.g., /apply/1/ -> 1)
+        const parts = window.location.pathname.split('/').filter(p => p);
+        const appId = parts[parts.length - 1];
+
+        try {
+            // Fetch from your DATA API
+            const response = await window.authFetch(`/applications/apply/${appId}/data/`);
+            
+            if (response && response.ok) {
+                const data = await response.json();
+                renderUI(data);
+            } else {
+                document.getElementById('app-content').innerHTML = "<h2>Application not found.</h2>";
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    function renderUI(data) {
+        document.getElementById('app-content').innerHTML = `
+            <div class="status-header">
+                <div>
+                    <h1 style="margin:0;">${data.job_title}</h1>
+                    <p style="color:gray;">${data.category}</p>
+                    <p style="color:gray;">${data.company_name}</p>
+                </div>
+                <span class="badge ${data.status}">${data.status}</span>
+            </div>
+            <hr>
+            <div style="margin: 20px 0;">
+                <p><strong>Applied on:</strong> ${new Date(data.applied_at).toLocaleDateString()}</p>
+                <p><strong>Resume:</strong> 
+                    <a href="${data.resume}" target="_blank" style="color:blue;">View Document</a>
+                </p>
+                <div style="background:#f9fafb; padding:15px; border-radius:8px; margin-top:20px;">
+                    <strong>Cover Letter:</strong>
+                    <p>${data.cover_letter || 'No cover letter provided.'}</p>
+                    <p><strong>Job Description:</strong> ${data.description || 'No description available.'}</p>
+                    <p><strong>Location:</strong> ${data.location || 'Location not specified.'}</p>
+                    <p><strong>Job Type:</strong> ${data.job_type || 'Type not specified.'}</p>
+                    <p><strong>Experience Level:</strong> ${data.experience_level || 'Not specified.'}</p>
+                    <p><strong>Salary Range:</strong> ${data.salary_min ? `$${data.salary_min}` : 'N/A'} - ${data.salary_max ? `$${data.salary_max}` : 'N/A'}</p>
+                    <p><strong>Skills Required:</strong> ${data.skills_required || 'Not specified.'}</p>
+                </div>
+            </div>
+            <button onclick="window.history.back()" style="cursor:pointer; padding:8px 16px;">← Back</button>
+        `;
+    }
+
+    document.addEventListener('DOMContentLoaded', loadDetail);
+</script>
+{% endblock %}

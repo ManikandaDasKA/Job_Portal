@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+
+{% block title %}My Applications | Job Portal{% endblock %}
+
+{% block content %}
+<style>
+    /* Layout Container */
+    .applications-container {
+        max-width: 1100px;
+        margin: 40px auto;
+        padding: 0 20px;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+
+    .header-section {
+        margin-bottom: 30px;
+    }
+
+    .header-section h1 {
+        font-size: 24px;
+        color: #111827;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .header-section p {
+        color: #6b7280;
+        margin-top: 8px;
+    }
+
+    /* Table Styling */
+    .app-table-wrapper {
+        background: white;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        overflow: hidden;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .app-table {
+        width: 100%;
+        border-collapse: collapse;
+        background-color: white;
+    }
+
+    .app-table th {
+        background: #f9fafb;
+        padding: 16px 20px;
+        text-align: left;
+        font-size: 12px;
+        font-weight: 600;
+        color: #4b5563;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .app-table td {
+        padding: 16px 20px;
+        border-bottom: 1px solid #f3f4f6;
+        color: #374151;
+        font-size: 14px;
+        vertical-align: middle;
+    }
+
+    .app-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .app-table tr:hover {
+        background-color: #fcfcfd;
+    }
+
+    /* Status Badges */
+    .status-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 12px;
+        border-radius: 9999px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: capitalize;
+    }
+    .status-pending { background: #fef3c7; color: #92400e; }
+    .status-accepted { background: #d1fae5; color: #065f46; }
+    .status-rejected { background: #fee2e2; color: #991b1b; }
+
+    /* Clickable Link Styling */
+    .action-link {
+        color: #7c3aed;
+        text-decoration: none;
+        font-weight: 600;
+        cursor: pointer !important; /* Forces the hand icon */
+        display: inline-block;
+        padding: 8px 12px;
+        transition: all 0.2s;
+        border-radius: 6px;
+    }
+
+    .action-link:hover {
+        background-color: #f5f3ff;
+        color: #6d28d9;
+    }
+
+    .loading-spinner {
+        padding: 60px;
+        text-align: center;
+        color: #6b7280;
+    }
+</style>
+
+<div class="applications-container">
+    <div class="header-section">
+        <h1>My Job Applications</h1>
+        <p>Manage and track the status of your submitted applications.</p>
+    </div>
+
+    <div class="app-table-wrapper">
+        <table class="app-table">
+            <thead>
+                <tr>
+                    <th>Job Title</th>
+                    <th>Company</th>
+                    <th>Date Applied</th>
+                    <th>Status</th>
+                    <th style="text-align: right;">Action</th>
+                </tr>
+            </thead>
+            <tbody id="applications-list">
+                <tr>
+                    <td colspan="5" class="loading-spinner">
+                        <div style="font-size: 16px; margin-bottom: 10px;">⌛</div>
+                        Loading your applications...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    /**
+     * Navigation helper that checks authentication before moving to a new page
+     */
+    async function secureNavigate(targetUrl) {
+        console.log("Navigation triggered to:", targetUrl);
+        
+        try {
+            // Check session status using your auth helper
+            const response = await window.authFetch('/users/details/');
+            
+            if (response && response.ok) {
+                console.log("Authentication verified. Redirecting...");
+                window.location.href = targetUrl;
+            } else {
+                console.warn("Unauthorized or session expired. Redirecting to login.");
+                window.location.href = '/users/login/';
+            }
+        } catch (error) {
+            console.error("Navigation system error:", error);
+            // Fallback: try to navigate anyway if authFetch service is temporarily down
+            window.location.href = targetUrl;
+        }
+    }
+
+    /**
+     * Fetches application list from the Django API
+     */
+    async function fetchUserApplications() {
+        try {
+            const response = await window.authFetch('{% url "applications:job-apply-data" %}'); 
+
+            if (!response || !response.ok) {
+                if (response.status === 401) {
+                    window.location.href = '/users/login/';
+                    return;
+                }
+                throw new Error('Server returned an error');
+            }
+
+            const data = await response.json();
+            renderTable(data);
+
+        } catch (error) {
+            console.error("Fetch Error:", error);
+            document.getElementById('applications-list').innerHTML = `
+                <tr>
+                    <td colspan="5" style="text-align:center; padding: 40px; color: #ef4444;">
+                        <strong>Unable to load applications.</strong><br>
+                        Please check your connection or login again.
+                    </td>
+                </tr>`;
+        }
+    }
+
+    /**
+     * Converts JSON data into Table Rows
+     */
+    function renderTable(apps) {
+        const tbody = document.getElementById('applications-list');
+        
+        if (!apps || apps.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" style="text-align:center; padding: 60px; color: #6b7280;">
+                        You haven't applied to any jobs yet.
+                    </td>
+                </tr>`;
+            return;
+        }
+
+        tbody.innerHTML = apps.map(app => {
+            const statusClass = `status-${app.status.toLowerCase()}`;
+            
+            // Format the date string safely
+            const dateObj = new Date(app.applied_at);
+            const formattedDate = isNaN(dateObj) ? 'N/A' : dateObj.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+
+            return `
+                <tr>
+                    <td style="font-weight: 600; color: #111827;">${app.job_title}</td>
+                    <td style="color: #4b5563;">${app.company_name}</td>
+                    <td style="color: #6b7280;">${formattedDate}</td>
+                    <td>
+                        <span class="status-pill ${statusClass}">
+                            ${app.status}
+                        </span>
+                    </td>
+                    <td style="text-align: right;">
+                        <a href="javascript:void(0)" 
+                           onclick="secureNavigate('/applications/apply/${app.application_id}/')" 
+                           class="action-link">
+                            View Details →
+                        </a>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    // Initialize application fetch when the page is ready
+    document.addEventListener('DOMContentLoaded', fetchUserApplications);
+</script>
+{% endblock %}

@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+{% block title %}Company Profile | Job Portal{% endblock %}
+
+{% block content %}
+<style>
+  .company-card {
+    max-width: 720px; margin: 0 auto; background: #fff;
+    border: 1px solid #e5e7eb; border-radius: 12px; padding: 32px;
+  }
+  .company-card h2 { font-size: 1.4rem; font-weight: 700; margin-bottom: 4px; }
+  .company-card .sub { color: #6b7280; font-size: 0.9rem; margin-bottom: 20px; }
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; }
+  .field input, .field textarea {
+    width: 100%; padding: 10px 14px; border: 1px solid #d1d5db;
+    border-radius: 8px; font-size: 0.95rem; font-family: inherit;
+  }
+  .field textarea { min-height: 110px; resize: vertical; }
+  .field input[readonly], .field textarea[readonly] {
+    background: #f9fafb; color: #4b5563; cursor: not-allowed;
+  }
+  .field .err { color: #b91c1c; font-size: 0.8rem; margin-top: 4px; display: none; }
+  .field.invalid input, .field.invalid textarea { border-color: #ef4444; }
+  .field.invalid .err { display: block; }
+  .banner { padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 18px; display: none; }
+  .banner.show { display: block; }
+  .banner.info { background: #fef3c7; color: #92400e; }
+  .banner.error { background: #fee2e2; color: #991b1b; }
+  .banner.success { background: #d1fae5; color: #065f46; }
+  .verify-badge {
+    display: inline-block; padding: 3px 10px; border-radius: 20px;
+    font-size: 0.75rem; font-weight: 700; margin-left: 8px; vertical-align: middle;
+  }
+  .verify-badge.yes { background: #d1fae5; color: #047857; }
+  .verify-badge.no  { background: #fef3c7; color: #b45309; }
+  .actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+  .btn { padding: 10px 20px; border-radius: 8px; font-weight: 600; border: none; cursor: pointer; text-decoration: none; font-size: 0.9rem; }
+  .btn-primary { background: #2563eb; color: #fff; }
+  .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+  .btn-secondary { background: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; }
+</style>
+
+<div class="company-card">
+  <h2>
+    <span id="page-title">Company Profile</span>
+    <span id="verify-badge" class="verify-badge" style="display:none;"></span>
+  </h2>
+  <p class="sub" id="page-sub">Loading...</p>
+
+  <div id="banner" class="banner"></div>
+
+  <form id="company-form" novalidate>
+    <div class="field" data-field="name">
+      <label for="name">Company name *</label>
+      <input type="text" id="name" name="name" maxlength="255">
+      <div class="err"></div>
+    </div>
+    <div class="field" data-field="industry">
+      <label for="industry">Industry</label>
+      <input type="text" id="industry" name="industry">
+      <div class="err"></div>
+    </div>
+    <div class="field" data-field="website">
+      <label for="website">Website</label>
+      <input type="url" id="website" name="website" placeholder="https://example.com">
+      <div class="err"></div>
+    </div>
+    <div class="field" data-field="location">
+      <label for="location">Location *</label>
+      <input type="text" id="location" name="location">
+      <div class="err"></div>
+    </div>
+    <div class="field" data-field="address">
+      <label for="address">Address</label>
+      <input type="text" id="address" name="address">
+      <div class="err"></div>
+    </div>
+    <div class="field" data-field="description">
+      <label for="description">Description</label>
+      <textarea id="description" name="description"></textarea>
+      <div class="err"></div>
+    </div>
+
+    <div class="actions">
+      <a href="/dashboard/recruiter/" class="btn btn-secondary">Back</a>
+      <button type="submit" id="btn-save" class="btn btn-primary" style="display:none;">Save changes</button>
+    </div>
+  </form>
+</div>
+
+<script>
+  // >>> Set this to your CompanyViewSet route (the one registered with your router).
+  // Must end with a slash. Example: '/recruiter/companies/'
+  const API_BASE = '/recruiter/companies/';
+
+  const FIELDS = ['name', 'industry', 'website', 'location', 'address', 'description'];
+  const form = document.getElementById('company-form');
+  const saveBtn = document.getElementById('btn-save');
+  const companyId = new URLSearchParams(window.location.search).get('id');
+
+  let canEdit = false;
+
+  function showBanner(type, msg) {
+    const b = document.getElementById('banner');
+    b.className = `banner ${type} show`;
+    b.textContent = msg;
+  }
+  function clearBanner() { document.getElementById('banner').className = 'banner'; }
+
+  function clearFieldErrors() {
+    document.querySelectorAll('.field').forEach(f => {
+      f.classList.remove('invalid');
+      f.querySelector('.err').textContent = '';
+    });
+  }
+  function setFieldError(name, msg) {
+    const wrap = document.querySelector(`.field[data-field="${name}"]`);
+    if (!wrap) return false;
+    wrap.classList.add('invalid');
+    wrap.querySelector('.err').textContent = Array.isArray(msg) ? msg.join(' ') : String(msg);
+    return true;
+  }
+
+  function setReadOnly(readonly) {
+    FIELDS.forEach(f => { document.getElementById(f).readOnly = readonly; });
+    saveBtn.style.display = readonly ? 'none' : 'inline-block';
+  }
+
+  function fillForm(data) {
+    FIELDS.forEach(f => { document.getElementById(f).value = data[f] || ''; });
+    const badge = document.getElementById('verify-badge');
+    badge.style.display = 'inline-block';
+    badge.className = 'verify-badge ' + (data.is_verified ? 'yes' : 'no');
+    badge.textContent = data.is_verified ? 'Verified' : 'Pending verification';
+  }
+
+  // Works with both DRF error shapes: {field: [msgs]} and {errors: {...}} / {message: ...}
+  function showApiErrors(body) {
+    const errs = body && body.errors ? body.errors : body;
+    let unmatched = [];
+    if (errs && typeof errs === 'object') {
+      Object.entries(errs).forEach(([key, val]) => {
+        if (!setFieldError(key, val)) {
+          unmatched.push(Array.isArray(val) ? val.join(' ') : String(val));
+        }
+      });
+    }
+    const msg = (body && (body.message || body.detail)) || unmatched.join(' ');
+    showBanner('error', msg || 'Could not save. Please check the form.');
+  }
+
+  async function init() {
+    await window.authCheckPromise;
+
+    const sub = document.getElementById('page-sub');
+
+    if (companyId) {
+      // VIEW / EDIT existing company
+      try {
+        const res = await window.authFetch(`${API_BASE}${companyId}/`);
+        if (!res.ok) {
+          sub.textContent = '';
+          showBanner('error', res.status === 404
+            ? 'Company not found, or you do not have access to it.'
+            : 'Failed to load company details.');
+          setReadOnly(true);
+          return;
+        }
+        const data = await res.json();
+        fillForm(data);
+
+        // Server decides. is_admin is true only for superusers.
+        canEdit = data.is_admin === true;
+        setReadOnly(!canEdit);
+
+        if (canEdit) {
+          sub.textContent = 'Update the company details below.';
+        } else {
+          sub.textContent = 'You can view this company but cannot edit it.';
+          showBanner('info', 'View only: only administrators can edit company details.');
+        }
+      } catch (e) {
+        console.error(e);
+        showBanner('error', 'Network error while loading the company.');
+        setReadOnly(true);
+      }
+    } else {
+      // CREATE new company: superusers only
+      document.getElementById('page-title').textContent = 'Create Company';
+      try {
+        const res = await window.authFetch('/users/details/');
+        const me = res.ok ? await res.json() : null;
+        canEdit = !!(me && me.is_superuser);
+      } catch (e) { canEdit = false; }
+
+      if (canEdit) {
+        sub.textContent = 'Enter the company details.';
+        setReadOnly(false);
+        saveBtn.textContent = 'Create company';
+      } else {
+        sub.textContent = '';
+        showBanner('info', 'Only administrators can create a company profile.');
+        setReadOnly(true);
+      }
+    }
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!canEdit) return; // UI guard only; the API enforces this too
+
+    clearBanner();
+    clearFieldErrors();
+
+    const payload = {};
+    FIELDS.forEach(f => { payload[f] = document.getElementById(f).value.trim(); });
+
+    // Client-side required check (mirrors the serializer)
+    let missing = false;
+    ['name', 'location'].forEach(f => {
+      if (!payload[f]) { setFieldError(f, 'This field is required.'); missing = true; }
+    });
+    if (missing) return;
+
+    saveBtn.disabled = true;
+    const originalText = saveBtn.textContent;
+    saveBtn.textContent = 'Saving...';
+
+    try {
+      const url = companyId ? `${API_BASE}${companyId}/` : API_BASE;
+      const res = await window.authFetch(url, {
+        method: companyId ? 'PATCH' : 'POST',
+        body: JSON.stringify(payload)
+      });
+      const body = await res.json().catch(() => ({}));
+
+      if (res.ok) {
+        showBanner('success', companyId ? 'Company updated successfully.' : 'Company created successfully.');
+        if (!companyId) {
+          const newId = body.company_id;
+          setTimeout(() => {
+            window.location.href = newId
+              ? `/recruiter/company/profile/?id=${newId}`
+              : '/dashboard/recruiter/';
+          }, 900);
+        }
+      } else if (res.status === 403) {
+        showBanner('error', body.message || body.detail || 'You are not allowed to do this.');
+      } else {
+        showApiErrors(body);
+      }
+    } catch (err) {
+      console.error(err);
+      showBanner('error', 'Network error. Please try again.');
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = originalText;
+    }
+  });
+
+  document.addEventListener('DOMContentLoaded', init);
+</script>
+{% endblock %}

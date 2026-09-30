@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Home - JobPortal{% endblock %}
+
+{% block content %}
+<div class="container" style="padding: 40px; font-family: sans-serif;">
+    <h2>User Dashboard</h2>
+    <hr>
+    <div id="content">
+        <p>Verifying authentication...</p>
+    </div>
+</div>
+
+<script>
+    async function loadUser() {
+        const container = document.getElementById('content');
+        
+        // 1. CRITICAL: Pause execution here until base.html finishes its background silent refresh check
+        await window.authCheckPromise;
+        
+        // 2. Now run the request. If the token was recovered, it will be securely attached
+        const res = await window.authFetch('/users/details/');
+        
+        if (res && res.ok) {
+            const data = await res.json();
+
+            if (data.role === 'recruiter') {
+                window.location.href = '/dashboard/recruiter/';
+                return; 
+            } else if (data.role === 'jobseeker') {
+                window.location.href = '/dashboard/jobseeker/';
+                return; 
+            }else if (data.role === 'admin') {
+                window.location.href = '/dashboard/admin/';
+                return; 
+            }
+
+            container.innerHTML = `
+                <div style="background: #f9fafb; padding: 20px; border-radius: 12px; border: 1px solid #e5e7eb;">
+                    <p style="font-size: 1.2rem;">Welcome, <strong id="user-display"></strong>!</p>
+                    <ul style="list-style: none; padding: 0;">
+                        <li style="margin-bottom: 8px;"><strong>ID:</strong> <span id="u-id"></span></li>
+                        <li style="margin-bottom: 8px;"><strong>Email:</strong> <span id="u-email"></span></li>
+                        <li style="margin-bottom: 8px;"><strong>Account Role:</strong> <span id="u-role"></span></li>
+                    </ul>
+                    <button id="logout-btn" style="margin-top: 15px; padding: 10px 20px; background-color: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                        Sign Out
+                    </button>
+                </div>
+            `;
+
+            document.getElementById('user-display').textContent = data.user_email || 'User';
+            document.getElementById('u-email').textContent = data.user_email;
+            document.getElementById('u-id').textContent = data.user_id;
+            document.getElementById('u-role').textContent = data.role || 'General User';
+
+            document.getElementById('logout-btn').onclick = async () => {
+                try {
+                    await window.authFetch('/users/logout-test/', { method: 'POST' });
+                } catch (err) {
+                    console.error("Logout request error details:", err);
+                } finally {
+                    window.accessToken = null;
+                    window.location.href = '/users/login/';
+                }
+            };
+
+        } else {
+            // If the server returns a 401 even after the middleware tried using the cookie, the session is truly dead
+            container.innerHTML = `
+                <p style="color: #991b1b;">Authentication failed or session expired. Redirecting to login...</p>
+            `;
+            setTimeout(() => { window.location.href = '/users/login/'; }, 1500);
+        }
+    }
+
+document.addEventListener('DOMContentLoaded', loadUser);
+</script>
+{% endblock %}

@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Notifications Hub</title>
+<style>
+    :root {
+        --bg-color: #f8fafc;
+        --card-bg: #ffffff;
+        --text-main: #1e293b;
+        --text-muted: #64748b;
+        --primary: #3b82f6;
+        --primary-hover: #2563eb;
+        --unread-bg: #eff6ff;
+        --border-color: #e2e8f0;
+    }
+
+    body {
+        font-family: 'Segoe UI', system-ui, sans-serif;
+        background-color: var(--bg-color);
+        margin: 0;
+        padding: 20px;
+        color: var(--text-main);
+    }
+
+    /* Notification Bell & Badge */
+    .nav-container {
+        display: flex;
+        justify-content: flex-end;
+        max-width: 800px;
+        margin: 0 auto 20px;
+        position: relative;
+    }
+
+    .bell-wrapper {
+        position: relative;
+        cursor: pointer;
+        padding: 10px;
+        background: white;
+        border-radius: 50%;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.2s;
+    }
+
+    .bell-wrapper:hover {
+        transform: scale(1.05);
+    }
+
+    .bell-icon {
+        font-size: 1.5rem;
+    }
+
+    .badge {
+        position: absolute;
+        top: -2px;
+        right: -2px;
+        background: #ef4444;
+        color: white;
+        font-size: 0.75rem;
+        font-weight: bold;
+        height: 20px;
+        min-width: 20px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 2px solid white;
+        display: none; /* Hidden by default if 0 */
+    }
+
+    /* Notification Panel */
+    .notification-panel {
+        max-width: 800px;
+        margin: 0 auto;
+        background: var(--card-bg);
+        border-radius: 12px;
+        box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
+        border: 1px solid var(--border-color);
+        overflow: hidden;
+    }
+
+    .panel-header {
+        padding: 20px;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .panel-header h2 {
+        margin: 0;
+        font-size: 1.25rem;
+    }
+
+    .refresh-btn {
+        background: none;
+        border: none;
+        color: var(--primary);
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    .refresh-btn:hover {
+        color: var(--primary-hover);
+        text-decoration: underline;
+    }
+
+    .notification-list {
+        max-height: 600px;
+        overflow-y: auto;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    /* Individual Notification Item */
+    .notification-item {
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        transition: background-color 0.2s;
+    }
+
+    .notification-item.unread {
+        background-color: var(--unread-bg);
+        border-left: 4px solid var(--primary);
+    }
+
+    .notification-content {
+        flex: 1;
+        padding-right: 15px;
+    }
+
+    .notification-title {
+        margin: 0 0 5px 0;
+        font-size: 1rem;
+        font-weight: 600;
+    }
+
+    .notification-message {
+        margin: 0 0 8px 0;
+        font-size: 0.9rem;
+        color: var(--text-muted);
+    }
+
+    .notification-time {
+        font-size: 0.75rem;
+        color: #94a3b8;
+    }
+
+    .mark-read-btn {
+        background: var(--primary);
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        cursor: pointer;
+        font-weight: 500;
+        white-space: nowrap;
+    }
+
+    .mark-read-btn:hover {
+        background: var(--primary-hover);
+    }
+
+    .empty-state {
+        padding: 40px;
+        text-align: center;
+        color: var(--text-muted);
+    }
+
+    .loader {
+        text-align: center;
+        padding: 30px;
+        color: var(--text-muted);
+    }
+</style>
+</head>
+<body>
+
+    <div class="nav-container">
+        <div class="bell-wrapper" onclick="loadNotifications()">
+            <span class="bell-icon">🔔</span>
+            <span class="badge" id="unread-badge">0</span>
+        </div>
+    </div>
+
+    <div class="notification-panel">
+        <div class="panel-header">
+            <h2>Notifications</h2>
+            <button class="refresh-btn" onclick="loadNotifications()">↻ Refresh</button>
+        </div>
+        <div id="notification-container">
+            <div class="loader">Loading notifications...</div>
+        </div>
+    </div>
+
+    <input type="hidden" name="csrfmiddlewaretoken" value="YOUR_CSRF_TOKEN_HERE">
+
+<script>
+    // Configuration - Ensure this matches your Django Main URL routing
+    const BASE_URL = "http://127.0.0.1:8000";
+    const API_PREFIX = "/notification"; // Adjust if your main urls.py uses a different prefix
+    
+    // Replace with dynamic token injection logic if using JWT
+    const TOKEN = "YOUR_ACCESS_TOKEN"; 
+
+    // Execute on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        loadUnreadCount();
+        loadNotifications();
+    });
+
+    // Custom Fetch Wrapper for Authentication
+    async function apiFetch(endpoint, options = {}) {
+        const fetchFn = window.authFetch || fetch; // Fallback to standard fetch
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+
+        const defaultHeaders = {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Authorization': `Bearer ${TOKEN}`
+        };
+
+        if (options.method && options.method !== 'GET') {
+            defaultHeaders['X-CSRFToken'] = csrfToken;
+        }
+
+        options.headers = { ...defaultHeaders, ...options.headers };
+
+        try {
+            const response = await fetchFn(`${BASE_URL}${API_PREFIX}${endpoint}`, options);
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            return await response.json();
+        } catch (error) {
+            console.error("API Fetch Error:", error);
+            return null;
+        }
+    }
+
+    // 1. Load Unread Count
+    async function loadUnreadCount() {
+        const data = await apiFetch('/unread-count/');
+        if (data && data.success) {
+            updateBadge(data.unread_count);
+        }
+    }
+
+    // Update the visual bell badge
+    function updateBadge(count) {
+        const badge = document.getElementById('unread-badge');
+        if (count > 0) {
+            badge.textContent = count > 99 ? '99+' : count;
+            badge.style.display = 'flex';
+        } else {
+            badge.style.display = 'none';
+            badge.textContent = '0';
+        }
+    }
+
+    // 2. Load Notification List
+    async function loadNotifications() {
+        const container = document.getElementById('notification-container');
+        container.innerHTML = '<div class="loader">Loading notifications...</div>';
+
+        const data = await apiFetch('/');
+        
+        if (!data || !data.success) {
+            container.innerHTML = '<div class="empty-state">Failed to load notifications.</div>';
+            return;
+        }
+
+        const notifications = data.data;
+
+        if (notifications.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div style="font-size: 2rem; margin-bottom: 10px;">📭</div>
+                    You're all caught up! No notifications yet.
+                </div>`;
+            return;
+        }
+
+        const listHtml = document.createElement('ul');
+        listHtml.className = 'notification-list';
+
+        notifications.forEach(notif => {
+            // Adjust property names (title, message, created_at, id) based on your NotificationListSerializer
+            const isUnread = !notif.is_read;
+            const dateStr = new Date(notif.created_at).toLocaleString();
+            
+            // Assume the serializer uses 'id' or 'notification_id'
+            const notifId = notif.id || notif.notification_id;
+
+            const li = document.createElement('li');
+            li.className = `notification-item ${isUnread ? 'unread' : ''}`;
+            li.id = `notif-${notifId}`;
+
+            li.innerHTML = `
+                <div class="notification-content">
+                    <h4 class="notification-title">${escapeHtml(notif.title || 'Notification')}</h4>
+                    <p class="notification-message">${escapeHtml(notif.message || '')}</p>
+                    <span class="notification-time">${dateStr}</span>
+                </div>
+                ${isUnread ? `
+                    <button class="mark-read-btn" onclick="markAsRead('${notifId}', this)">
+                        Mark as Read
+                    </button>
+                ` : ''}
+            `;
+            listHtml.appendChild(li);
+        });
+
+        container.innerHTML = '';
+        container.appendChild(listHtml);
+    }
+
+    // 3. Mark Single Notification as Read
+    async function markAsRead(notificationId, btnElement) {
+        const originalText = btnElement.textContent;
+        btnElement.textContent = "Updating...";
+        btnElement.disabled = true;
+
+        const data = await apiFetch(`/${notificationId}/read/`, {
+            method: 'PATCH',
+            body: JSON.stringify({}) // Empty payload, view handles the logic
+        });
+
+        if (data && data.success) {
+            // Update UI visually without reloading the whole list
+            const listItem = document.getElementById(`notif-${notificationId}`);
+            if (listItem) {
+                listItem.classList.remove('unread');
+                listItem.style.borderLeft = "none";
+                btnElement.remove(); // Remove the button
+            }
+            
+            // Decrement the badge count safely
+            const badge = document.getElementById('unread-badge');
+            let currentCount = parseInt(badge.textContent) || 0;
+            if (currentCount > 0) {
+                updateBadge(currentCount - 1);
+            }
+        } else {
+            alert("Failed to mark as read.");
+            btnElement.textContent = originalText;
+            btnElement.disabled = false;
+        }
+    }
+
+    // Utility: Prevent XSS injection when rendering text
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+</script>
+
+</body>
+</html>

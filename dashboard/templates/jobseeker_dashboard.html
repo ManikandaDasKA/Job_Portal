@@ -1,0 +1,588 @@
+{% extends "base.html" %}
+
+{% block title %}Jobseeker Dashboard | Job Portal{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --primary-color: #7c3aed;
+        --primary-dark: #6d28d9;
+        --primary-light: #ede9fe;
+        --success-color: #10b981;
+        --success-light: #d1fae5;
+        --warning-color: #f59e0b;
+        --warning-light: #fef3c7;
+        --danger-color: #ef4444;
+        --danger-light: #fee2e2;
+        --info-color: #3b82f6;
+        --info-light: #eff6ff;
+        --neutral-50: #f9fafb;
+        --neutral-100: #f3f4f6;
+        --neutral-200: #e5e7eb;
+        --neutral-600: #4b5563;
+        --neutral-700: #374151;
+        --neutral-900: #111827;
+    }
+
+    body { 
+        background: linear-gradient(135deg, #f5f3ff 0%, #ffffff 100%); 
+        font-family: 'Inter', system-ui, -apple-system, sans-serif; 
+        color: var(--neutral-700); 
+    }
+    
+    .dashboard-container { 
+        min-height: 100vh; 
+        padding: 2rem; 
+        max-width: 1400px; 
+        margin: 0 auto; 
+    }
+    
+    .dashboard-header { 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+        margin-bottom: 2.5rem; 
+        gap: 1.5rem; 
+        flex-wrap: wrap; 
+    }
+    
+    .header-content h1 { 
+        font-size: 1.85rem; 
+        font-weight: 800; 
+        color: var(--neutral-900); 
+        margin: 0;
+    }
+    
+    .header-content p { 
+        font-size: 0.95rem; 
+        color: var(--neutral-600); 
+        margin-top: 0.5rem; 
+    }
+    
+    .btn-primary { 
+        background-color: var(--primary-color); 
+        color: white; 
+        padding: 0.75rem 1.5rem; 
+        border-radius: 8px; 
+        font-weight: 600; 
+        text-decoration: none; 
+        display: inline-flex; 
+        align-items: center; 
+        gap: 0.5rem; 
+        border: none; 
+        cursor: pointer; 
+        transition: 0.3s; 
+    }
+    
+    .btn-primary:hover { 
+        background-color: var(--primary-dark); 
+        transform: translateY(-2px); 
+    }
+
+    /* --- Notification Bell Styles --- */
+    .notification-bell {
+        position: relative;
+        background: white;
+        border: 1px solid var(--neutral-200);
+        border-radius: 50%;
+        width: 45px;
+        height: 45px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+    
+    .notification-bell:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        border-color: var(--primary-light);
+    }
+    
+    .bell-badge {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        background: var(--danger-color);
+        color: white;
+        font-size: 0.7rem;
+        font-weight: bold;
+        min-width: 20px;
+        height: 20px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 2px solid white;
+        box-sizing: border-box;
+    }
+    
+    .stats-grid { 
+        display: grid; 
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); 
+        gap: 1.5rem; 
+        margin-bottom: 2.5rem; 
+    }
+    
+    .stat-card { 
+        background: white; 
+        border-radius: 16px; 
+        padding: 1.5rem; 
+        border: 1px solid var(--neutral-200); 
+        transition: 0.3s; 
+        position: relative; 
+    }
+    
+    .stat-card:hover { 
+        transform: translateY(-5px); 
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.05); 
+    }
+    
+    .stat-card::after { 
+        content: ""; 
+        position: absolute; 
+        bottom: 0; 
+        left: 0; 
+        width: 100%; 
+        height: 4px; 
+    }
+    
+    .stat-total::after { background: var(--primary-color); }
+    .stat-active::after { background: var(--info-color); }
+    .stat-candidates::after { background: var(--success-color); }
+    .stat-new::after { background: var(--danger-color); }
+    
+    .stat-icon { 
+        width: 44px; 
+        height: 44px; 
+        border-radius: 12px; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        font-size: 1.25rem; 
+        margin-bottom: 1rem; 
+    }
+    
+    .stat-value { 
+        font-size: 2rem; 
+        font-weight: 800; 
+        color: var(--neutral-900); 
+    }
+    
+    .stat-label { 
+        font-size: 0.85rem; 
+        font-weight: 600; 
+        color: var(--neutral-600); 
+        text-transform: uppercase; 
+    }
+    
+    .profile-card { 
+        background: white; 
+        border-radius: 16px; 
+        border: 1px solid var(--neutral-200); 
+        padding: 2rem; 
+        margin-bottom: 2.5rem; 
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04); 
+    }
+    
+    .profile-header { 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: flex-start; 
+        margin-bottom: 1.5rem; 
+        gap: 1rem; 
+    }
+    
+    .profile-header h3 { 
+        font-size: 1.1rem; 
+        font-weight: 700; 
+        color: var(--neutral-900); 
+        margin: 0 0 0.25rem 0; 
+    }
+    
+    .profile-header p { 
+        font-size: 0.9rem; 
+        color: var(--neutral-600); 
+        margin: 0; 
+    }
+    
+    .progress-track { 
+        width: 100%; 
+        height: 12px; 
+        background: var(--neutral-100); 
+        border-radius: 10px; 
+        overflow: hidden; 
+        margin-bottom: 0.75rem; 
+    }
+    
+    .progress-bar { 
+        height: 100%; 
+        background: linear-gradient(90deg, var(--primary-color), var(--info-color)); 
+        border-radius: 10px; 
+        transition: width 0.3s ease; 
+    }
+    
+    .progress-bar.low { background: linear-gradient(90deg, #ef4444, #f87171); }
+    .progress-bar.medium { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+    .progress-bar.high { background: linear-gradient(90deg, #10b981, #34d399); }
+    
+    .progress-tips { 
+        font-size: 0.85rem; 
+        background: var(--primary-light); 
+        border-left: 4px solid var(--primary-color); 
+        padding: 1rem; 
+        border-radius: 8px; 
+        margin-top: 1rem; 
+    }
+    
+    .content-card { 
+        background: white; 
+        border-radius: 16px; 
+        border: 1px solid var(--neutral-200); 
+        overflow: hidden; 
+    }
+    
+    .card-header { 
+        padding: 1.5rem; 
+        border-bottom: 1px solid var(--neutral-100); 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+        flex-wrap: wrap; 
+        gap: 1rem; 
+    }
+    
+    .table { 
+        width: 100%; 
+        border-collapse: collapse; 
+    }
+    
+    .table th { 
+        background: var(--neutral-50); 
+        padding: 1rem 1.5rem; 
+        text-align: left; 
+        font-size: 0.75rem; 
+        font-weight: 700; 
+        color: var(--neutral-600); 
+        text-transform: uppercase; 
+    }
+    
+    .table td { 
+        padding: 1.25rem 1.5rem; 
+        border-bottom: 1px solid var(--neutral-50); 
+    }
+    
+    .table tbody tr:hover { 
+        background: var(--neutral-50); 
+    }
+    
+    .job-badge { 
+        padding: 0.4rem 0.8rem; 
+        border-radius: 8px; 
+        font-size: 0.75rem; 
+        font-weight: 700; 
+    }
+    
+    .badge-accepted { background: var(--success-light); color: var(--success-color); }
+    .badge-pending { background: var(--warning-light); color: var(--warning-color); }
+    .badge-rejected { background: var(--danger-light); color: var(--danger-color); }
+    
+    .btn-action { 
+        background: var(--primary-light); 
+        color: var(--primary-color); 
+        font-size: 0.8rem; 
+        border: none; 
+        padding: 0.5rem 1rem; 
+        border-radius: 6px; 
+        font-weight: 600; 
+        cursor: pointer; 
+        transition: 0.3s; 
+    }
+    
+    .btn-action:hover { 
+        background: var(--primary-color); 
+        color: white; 
+        transform: translateY(-2px); 
+    }
+    
+    .loading-spinner { 
+        display: inline-block; 
+        width: 20px; 
+        height: 20px; 
+        border: 3px solid var(--primary-light); 
+        border-top-color: var(--primary-color); 
+        border-radius: 50%; 
+        animation: spin 0.6s linear infinite; 
+    }
+    
+    @keyframes spin { 
+        to { transform: rotate(360deg); } 
+    }
+    
+    @media (max-width: 768px) { 
+        .dashboard-header { flex-direction: column; align-items: flex-start; }
+        .stats-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+        .table th, .table td { padding: 0.75rem; font-size: 0.8rem; }
+    }
+</style>
+
+<div class="dashboard-container">
+    <header class="dashboard-header">
+        <div class="header-content">
+            <h1>Welcome! 👋</h1>
+            <p>You've applied to <strong id="total-applied">0</strong> positions. Keep pushing towards your dream job!</p>
+        </div>
+        <div class="header-actions" style="display: flex; align-items: center; gap: 1rem;">
+            
+            <button onclick="secureNavigate('/notification/inbox/')" class="notification-bell" title="View Notifications">
+                <span style="font-size: 1.3rem;">🔔</span>
+                <span class="bell-badge" id="dashboard-unread-badge" style="display: none;">0</span>
+            </button>
+
+            {% url 'ApplingForJobs:job-search-ui' as job_search_url %}
+            <a href="javascript:void(0)" data-url="{{ job_search_url }}" onclick="secureNavigate(this.dataset.url)" class="btn-primary">🔍 Browse Jobs</a>
+        </div>
+    </header>
+
+    <div class="profile-card">
+        <div class="profile-header">
+            <div>
+                <h3>Profile Completion</h3>
+                <p>Complete your profile to increase your chances of getting hired</p>
+            </div>
+            <a href="{% url 'jobseeker:jobseeker-profile-interface' %}" style="color: var(--primary-color); font-weight: 600; text-decoration: none;">Profile →</a>
+        </div>
+        <div class="progress-track">
+            <div id="completion-bar" class="progress-bar" style="width: 0%;"></div>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: 700; color: var(--neutral-900);"><strong id="completion-percent">0</strong>% Complete</span>
+            <span style="font-size: 0.85rem; color: var(--neutral-600);" id="profile-status">Keep filling your profile</span>
+        </div>
+        <div class="progress-tips">
+            <p style="margin: 0; font-size: 0.85rem;" id="profile-tip">💡 Tip: A complete profile attracts recruiter attention.</p>
+        </div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card stat-total">
+            <div class="stat-icon" style="background: var(--primary-light); color: var(--primary-color);">📋</div>
+            <div class="stat-label">Applications</div>
+            <div class="stat-value" id="stat-total">0</div>
+        </div>
+        <div class="stat-card stat-active">
+            <div class="stat-icon" style="background: var(--info-light); color: var(--info-color);">⏳</div>
+            <div class="stat-label">Pending</div>
+            <div class="stat-value" id="stat-pending">0</div>
+        </div>
+        <div class="stat-card stat-candidates">
+            <div class="stat-icon" style="background: var(--success-light); color: var(--success-color);">✅</div>
+            <div class="stat-label">Accepted</div>
+            <div class="stat-value" id="stat-accepted">0</div>
+        </div>
+        <div class="stat-card stat-new">
+            <div class="stat-icon" style="background: var(--danger-light); color: var(--danger-color);">❌</div>
+            <div class="stat-label">Rejected</div>
+            <div class="stat-value" id="stat-rejected">0</div>
+        </div>
+    </div>
+
+    <div class="content-card">
+        <div class="card-header">
+            <h2 style="font-size: 1.1rem; font-weight: 700; margin: 0;">Recent Applications</h2>
+            <div style="display: flex; gap: 0.5rem;">
+                {% url 'applications:job-apply' as job_apply_url %}
+                <button class="btn-action" onclick="secureNavigate('{{ job_apply_url }}')" style="background: var(--neutral-100); color: var(--neutral-700); cursor: pointer;">View All</button>
+            </div>
+        </div>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Job Title</th>
+                    <th>Company</th>
+                    <th>Status</th>
+                    <th>Applied Date</th>
+                    <th style="text-align: right;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 2rem;">
+                        <div class="loading-spinner"></div>
+                        <p style="margin-top: 1rem; color: var(--neutral-600);">Loading applications...</p>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // Navigation wrapper to verify token before changing pages
+    async function secureNavigate(targetUrl) {
+        const response = await window.authFetch('/users/details/');
+        if (response && response.ok) {
+            window.location.href = targetUrl;
+        } else {
+            console.warn("Unauthorized access attempt.");
+        }
+    }
+
+    function escapeHtml(text) {
+        const map = {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'};
+        return String(text).replace(/[&<>"']/g, m => map[m]);
+    }
+
+    function formatDate(dateString) {
+        if (!dateString) return 'N/A';
+        const options = { year: 'numeric', month: 'short', day: 'numeric' };
+        return new Date(dateString).toLocaleDateString('en-US', options);
+    }
+
+    // --- Core Dashboard Fetch ---
+    function loadDashboardData() {
+        window.authFetch('/dashboard/jobseeker/data/')
+            .then(response => {
+                if (!response) return; 
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        showError('Session expired. Please log in again.');
+                    }
+                    throw new Error('HTTP error! status: ' + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data) populateDashboard(data);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                // Optionally show error to user
+            });
+    }
+
+    // --- Fetch Unread Notifications Count ---
+    async function fetchUnreadCount() {
+        try {
+            const response = await window.authFetch('/notification/unread-count/');
+            if (response && response.ok) {
+                const data = await response.json();
+                const badge = document.getElementById('dashboard-unread-badge');
+                
+                if (data.success && data.unread_count > 0) {
+                    badge.textContent = data.unread_count > 99 ? '99+' : data.unread_count;
+                    badge.style.display = 'flex';
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+        } catch (error) {
+            console.error('Failed to load unread count:', error);
+        }
+    }
+
+    // --- Populate UI Logic ---
+    function populateDashboard(data) {
+        if (data.user) {
+            document.querySelector('.header-content h1').textContent = 'Welcome, ' + escapeHtml(data.user) + '! 👋';
+        }
+        if (data.counts) {
+            document.getElementById('stat-total').textContent = data.counts.total_applied || 0;
+            document.getElementById('stat-pending').textContent = data.counts.total_pending || 0;
+            document.getElementById('stat-accepted').textContent = data.counts.total_accepted || 0;
+            document.getElementById('stat-rejected').textContent = data.counts.total_rejected || 0;
+            document.getElementById('total-applied').textContent = data.counts.total_applied || 0;
+        }
+        if (data.profile_completion !== undefined) {
+            const completion = data.profile_completion;
+            document.getElementById('completion-bar').style.width = completion + '%';
+            document.getElementById('completion-bar').className = 'progress-bar ' + (completion < 40 ? 'low' : completion < 80 ? 'medium' : 'high');
+            document.getElementById('completion-percent').textContent = completion;
+            document.getElementById('profile-status').textContent = completion < 40 ? 'Keep filling your profile' : completion < 80 ? 'Getting closer!' : 'Great job! Profile looks complete';
+        }
+        if (data.all_applications) {
+            populateApplicationsTable(data.all_applications);
+        }
+    }
+
+    function populateApplicationsTable(applications) {
+        const tbody = document.querySelector('.table tbody');
+        if (!tbody) return;
+        
+        if (applications.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 4rem 2rem;">
+                        <div style="font-size: 3rem;">📭</div>
+                        <div style="font-weight: 700; color: var(--neutral-900); margin: 1rem 0;">No applications yet</div>
+                        <p style="color: var(--neutral-600); margin-bottom: 1.5rem;">Start browsing opportunities.</p>
+                        <a href="javascript:void(0)" onclick="secureNavigate('{% url 'ApplingForJobs:job-search-ui' %}')" class="btn-primary" style="font-size: 0.9rem; padding: 0.6rem 1.2rem;">🔍 Browse Jobs</a>
+                    </td>
+                </tr>`;
+            return;
+        }
+
+        tbody.innerHTML = applications.map(app => `
+            <tr>
+                <td>
+                    <div style="font-weight: 700; color: var(--neutral-900);">
+                        ${escapeHtml(app.job_title || 'N/A')}
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--neutral-600);">
+                        ${escapeHtml(app.category || 'N/A')}
+                    </div>
+                </td>
+                <td style="font-weight: 600;">
+                    ${escapeHtml(app.company || 'N/A')}
+                </td>
+                <td>
+                    <span class="job-badge badge-${(app.status || 'pending').toLowerCase()}">
+                        ${escapeHtml(app.status || 'Pending')}
+                    </span>
+                </td>
+                <td style="font-size: 0.85rem; color: var(--neutral-600);">
+                    ${formatDate(app.date)}
+                </td>
+                <td style="text-align: right;">
+                    <button class="btn-action view-details-btn" onclick="secureNavigate('/applications/${app.application_id}/')">
+                        View Details
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function showError(message) {
+        const errorDiv = document.createElement('div');
+        errorDiv.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #fee2e2; color: #dc2626; padding: 1rem; border-radius: 8px; z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.1);';
+        errorDiv.textContent = message;
+        document.body.appendChild(errorDiv);
+        setTimeout(() => errorDiv.remove(), 5000);
+    }
+
+    // --- Initialization & Polling ---
+    document.addEventListener('DOMContentLoaded', () => {
+        // Safe polling to wait for global authFetch/accessToken to be ready
+        const checkAuthAndLoad = () => {
+            if (window.authFetch !== undefined) {
+                loadDashboardData();
+                fetchUnreadCount();
+            } else {
+                setTimeout(checkAuthAndLoad, 50);
+            }
+        };
+        checkAuthAndLoad();
+    });
+
+    // Refresh dashboard stats and notification count every 30 seconds
+    setInterval(() => {
+        if (window.authFetch !== undefined) {
+            loadDashboardData();
+            fetchUnreadCount(); 
+        }
+    }, 30000);
+</script>
+
+{% endblock %}

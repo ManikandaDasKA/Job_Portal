@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create Account — Job Portal</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+      color: #1a1a1a;
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: 16px;
+      border: 1px solid #e8e8e4;
+      padding: 40px 40px 36px;
+      width: 100%;
+      max-width: 480px;
+    }
+
+    .logo { font-size: 22px; font-weight: 600; color: #1a1a1a; margin-bottom: 4px; }
+    .logo span { color: #185FA5; }
+    .subtitle { font-size: 14px; color: #6b6b6b; margin-bottom: 28px; }
+
+    /* Step indicator */
+    .steps { display: flex; align-items: center; margin-bottom: 28px; }
+    .step-item { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; }
+    .step-circle {
+      width: 28px; height: 28px; border-radius: 50%;
+      border: 2px solid #dcdcdc; background: #fff; color: #aaa;
+      font-size: 12px; font-weight: 600;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.3s; position: relative; z-index: 1;
+    }
+    .step-circle.active  { border-color: #185FA5; background: #185FA5; color: #fff; }
+    .step-circle.done    { border-color: #1e8e3e; background: #1e8e3e; color: #fff; }
+    .step-label          { font-size: 10px; color: #aaa; font-weight: 500; white-space: nowrap; }
+    .step-label.active   { color: #185FA5; }
+    .step-label.done     { color: #1e8e3e; }
+    .step-line           { flex: 1; height: 2px; background: #e0e0e0; margin-bottom: 14px; transition: background 0.3s; max-width: 60px; }
+    .step-line.done      { background: #1e8e3e; }
+
+    /* Alerts */
+    .alert { padding: 11px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 18px; display: none; line-height: 1.5; }
+    .alert.success { background: #eaf3de; color: #27500a; border: 1px solid #c0dd97; }
+    .alert.error   { background: #fcebeb; color: #791f1f; border: 1px solid #f09595; }
+    .alert.warning { background: #faeeda; color: #633806; border: 1px solid #fac775; }
+    .alert.visible { display: block; }
+
+    /* Role cards */
+    .role-group {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .role-card {
+      border: 1.5px solid #e8e8e4; border-radius: 10px; padding: 14px 10px;
+      cursor: pointer; transition: all 0.15s;
+      display: flex; flex-direction: column; align-items: center; gap: 5px; position: relative;
+    }
+    .role-card input[type="radio"] { position: absolute; opacity: 0; width: 0; height: 0; }
+    .role-icon  { font-size: 22px; line-height: 1; }
+    .role-label { font-size: 13px; font-weight: 500; color: #3d3d3d; }
+    .role-desc  { font-size: 11px; color: #8a8a8a; text-align: center; }
+    .role-card:hover    { border-color: #185FA5; background: #f0f6fd; }
+    .role-card.selected { border-color: #185FA5; background: #eef5fc; }
+    .role-card.selected .role-label { color: #185FA5; }
+
+    /* Fields */
+    .field-group { margin-bottom: 16px; }
+    label { display: block; font-size: 13px; font-weight: 500; color: #3d3d3d; margin-bottom: 6px; }
+    input[type="email"],
+    input[type="password"],
+    input[type="text"] {
+      width: 100%; height: 42px; padding: 0 14px;
+      border: 1px solid #dcdcdc; border-radius: 8px;
+      font-size: 14px; color: #1a1a1a; background: #fff; outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    input:focus { border-color: #185FA5; box-shadow: 0 0 0 3px rgba(24,95,165,0.12); }
+    input.error { border-color: #d93025; box-shadow: 0 0 0 3px rgba(217,48,37,0.1); }
+    .field-error { font-size: 12px; color: #d93025; margin-top: 5px; display: none; }
+    .field-error.visible { display: block; }
+
+    /* Strength bar */
+    .strength-bar  { margin-top: 8px; height: 4px; background: #eee; border-radius: 2px; overflow: hidden; }
+    .strength-fill { height: 100%; border-radius: 2px; width: 0%; transition: width 0.3s, background 0.3s; }
+    .strength-text { font-size: 11px; color: #8a8a8a; margin-top: 4px; }
+
+    /* OTP boxes */
+    .otp-row { display: flex; gap: 8px; justify-content: center; margin: 4px 0 6px; }
+    .otp-box {
+      width: 46px; height: 52px; border: 1.5px solid #dcdcdc; border-radius: 8px;
+      font-size: 20px; font-weight: 600; text-align: center; outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s; color: #1a1a1a;
+    }
+    .otp-box:focus { border-color: #185FA5; box-shadow: 0 0 0 3px rgba(24,95,165,0.12); }
+    .otp-box.error { border-color: #d93025; animation: shake 0.3s ease; }
+    @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
+
+    .otp-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 12px; color: #8a8a8a; }
+    .resend-btn { font-size: 12px; color: #185FA5; background: none; border: none; cursor: pointer; font-weight: 500; padding: 0; }
+    .resend-btn:disabled { color: #aaa; cursor: not-allowed; }
+
+    .otp-info {
+      background: #f0f6fd; border: 1px solid #b5d4f4; border-radius: 8px;
+      padding: 10px 14px; font-size: 12px; color: #185FA5; margin-bottom: 18px; line-height: 1.5;
+    }
+    .otp-info strong { font-weight: 600; }
+
+    /* Buttons */
+    .btn-submit {
+      width: 100%; height: 44px; background: #185FA5; color: #fff;
+      border: none; border-radius: 8px; font-size: 15px; font-weight: 500;
+      cursor: pointer; transition: background 0.15s, transform 0.1s;
+      margin-top: 6px; display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-submit:hover    { background: #0d4a88; }
+    .btn-submit:active   { transform: scale(0.98); }
+    .btn-submit:disabled { background: #aaa; cursor: not-allowed; }
+
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.35); border-top-color: #fff;
+      border-radius: 50%; animation: spin 0.6s linear infinite; display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .back-link {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 12px; color: #6b6b6b; cursor: pointer;
+      background: none; border: none; padding: 0; margin-bottom: 16px;
+    }
+    .back-link:hover { color: #185FA5; }
+
+    .footer-text { text-align: center; font-size: 13px; color: #6b6b6b; margin-top: 22px; }
+    .footer-text a { color: #185FA5; text-decoration: none; font-weight: 500; }
+    .footer-text a:hover { text-decoration: underline; }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    @media (max-width: 480px) {
+      .card { padding: 28px 18px 24px; }
+      .otp-box { width: 40px; height: 46px; font-size: 18px; }
+    }
+  </style>
+</head>
+<body>
+<div class="card">
+
+  <div class="logo">Job<span>Portal</span></div>
+  <p class="subtitle" id="subtitle">Create an account to get started.</p>
+
+  <!-- Step indicator -->
+  <div class="steps">
+    <div class="step-item">
+      <div class="step-circle active" id="sc1">1</div>
+      <div class="step-label active" id="sl1">Details</div>
+    </div>
+    <div class="step-line" id="line1"></div>
+    <div class="step-item">
+      <div class="step-circle" id="sc2">2</div>
+      <div class="step-label" id="sl2">Verify OTP</div>
+    </div>
+    <div class="step-line" id="line2"></div>
+    <div class="step-item">
+      <div class="step-circle" id="sc3">3</div>
+      <div class="step-label" id="sl3">Done</div>
+    </div>
+  </div>
+
+  <div class="alert" id="alert-box"></div>
+
+  <!-- PANEL 1: Register -->
+  <div class="panel active" id="panel-register">
+    <div class="field-group">
+      <label>I am a</label>
+      <div class="role-group" id="role-group">
+        <label class="role-card selected" id="card-seeker">
+          <input type="radio" name="role" value="jobseeker" checked>
+          <span class="role-icon">🔍</span>
+          <span class="role-label">Job Seeker</span>
+          <span class="role-desc">Find and apply</span>
+        </label>
+        <label class="role-card" id="card-recruiter">
+          <input type="radio" name="role" value="recruiter">
+          <span class="role-icon">🏢</span>
+          <span class="role-label">Recruiter</span>
+          <span class="role-desc">Post jobs & hire</span>
+        </label>
+
+        <!-- Admin Card: Hidden by default, unhidden if authenticated admin is detected -->
+        <label class="role-card" id="card-admin" style="display: none;">
+          <input type="radio" name="role" value="admin">
+          <span class="role-icon">🛡️</span>
+          <span class="role-label">Admin</span>
+          <span class="role-desc">Platform Staff</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <label for="email">Email address</label>
+      <input type="email" id="email" placeholder="you@example.com" autocomplete="email">
+      <div class="field-error" id="err-email">Please enter a valid email address.</div>
+    </div>
+
+    <div class="field-group">
+      <label for="password">Password</label>
+      <input type="password" id="password" placeholder="Minimum 8 characters" autocomplete="new-password">
+      <div class="strength-bar"><div class="strength-fill" id="strength-fill"></div></div>
+      <div class="strength-text" id="strength-text"></div>
+      <div class="field-error" id="err-password">Password must be at least 8 characters.</div>
+    </div>
+
+    <div class="field-group">
+      <label for="confirm-password">Confirm password</label>
+      <input type="password" id="confirm-password" placeholder="Re-enter your password" autocomplete="new-password">
+      <div class="field-error" id="err-confirm">Passwords do not match.</div>
+    </div>
+
+    <button class="btn-submit" id="btn-register">
+      <div class="spinner" id="spin1"></div>
+      <span id="btn1-text">Send OTP</span>
+    </button>
+  </div>
+
+  <!-- PANEL 2: OTP -->
+  <div class="panel" id="panel-otp">
+    <button class="back-link" onclick="goBack()">&#8592; Back</button>
+
+    <div class="otp-info">
+      OTP sent to <strong id="otp-email-display"></strong>.<br>
+      Enter the 6-digit code below. Valid for <strong>2 minutes</strong>.
+    </div>
+
+    <div class="field-group">
+      <label>Enter OTP</label>
+      <div class="otp-row" id="otp-row">
+        <input class="otp-box" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]">
+        <input class="otp-box" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]">
+        <input class="otp-box" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]">
+        <input class="otp-box" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]">
+        <input class="otp-box" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]">
+        <input class="otp-box" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]">
+      </div>
+      <div class="otp-meta">
+        <span id="timer-text">Resend in <strong id="timer-count">2:00</strong></span>
+        <button class="resend-btn" id="resend-btn" disabled onclick="resendOtp()">Resend OTP</button>
+      </div>
+    </div>
+
+    <button class="btn-submit" id="btn-verify">
+      <div class="spinner" id="spin2"></div>
+      <span id="btn2-text">Verify &amp; Create Account</span>
+    </button>
+  </div>
+
+  <!-- PANEL 3: Success -->
+  <div class="panel" id="panel-success">
+    <div style="text-align:center;padding:16px 0 8px">
+      <div style="width:56px;height:56px;background:#eaf3de;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:26px;color:#1e8e3e;font-weight:700">&#10003;</div>
+      <div style="font-size:17px;font-weight:600;color:#1a1a1a;margin-bottom:8px">Account created!</div>
+      <div style="font-size:13px;color:#6b6b6b;line-height:1.6;margin-bottom:24px">
+        The account has been verified and registered successfully.
+      </div>
+      <a href="/users/login/" id="success-redirect-btn" style="display:inline-block;padding:10px 28px;background:#185FA5;color:#fff;border-radius:8px;text-decoration:none;font-size:14px;font-weight:500">Go to Login</a>
+    </div>
+  </div>
+
+  <p class="footer-text" id="footer-link">
+    Already have an account? <a href="/users/login/">Sign in</a>
+  </p>
+</div>
+
+<script>
+  let userEmail = '';
+  let verifyToken = ''; 
+  let timerInterval = null;
+
+  function getCookie(name) {
+    const match = document.cookie.match(new RegExp('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)'));
+    return match ? match[2] : '';
+  }
+
+  function getAuthHeaders() {
+    const headers = {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCookie('csrftoken')
+    };
+    const token = window.accessToken || localStorage.getItem('access_token');
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    return headers;
+  }
+
+  // --- Dynamic Admin Option Check ---
+  async function checkAdminStatus() {
+    try {
+      const fetchFn = window.authFetch || fetch;
+      const res = await fetchFn('/users/details/', {
+        headers: getAuthHeaders(),
+        credentials: 'same-origin'
+      });
+      if (res && res.ok) {
+        const user = await res.json();
+        if (user.role === 'admin' || user.is_staff || user.is_superuser) {
+          const adminCard = document.getElementById('card-admin');
+          if (adminCard) {
+            adminCard.style.display = 'flex';
+            document.getElementById('subtitle').textContent = 'Admin Registration Portal: Create applicant, recruiter, or staff admin.';
+          }
+        }
+      }
+    } catch (err) {
+      console.log('User is anonymous or error fetching session details.');
+    }
+  }
+
+  // Setup Role Cards
+  function setupRoleCards() {
+    document.querySelectorAll('.role-card').forEach(card => {
+      card.addEventListener('click', () => {
+        document.querySelectorAll('.role-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        const radio = card.querySelector('input[type="radio"]');
+        if (radio) radio.checked = true;
+      });
+    });
+  }
+
+  // Password strength visualizer
+  document.getElementById('password').addEventListener('input', function () {
+    const v = this.value;
+    let score = 0;
+    if (v.length >= 8) score++;
+    if (/[A-Z]/.test(v)) score++;
+    if (/[0-9]/.test(v)) score++;
+    if (/[^A-Za-z0-9]/.test(v)) score++;
+    const levels = [
+      {pct:'0%',   color:'#eee',    label:''},
+      {pct:'25%',  color:'#d93025', label:'Weak'},
+      {pct:'50%',  color:'#f4a227', label:'Fair'},
+      {pct:'75%',  color:'#1a73e8', label:'Good'},
+      {pct:'100%', color:'#1e8e3e', label:'Strong'},
+    ];
+    const l = v.length === 0 ? levels[0] : levels[score];
+    document.getElementById('strength-fill').style.cssText = `width:${l.pct};background:${l.color}`;
+    const t = document.getElementById('strength-text');
+    t.textContent = l.label;
+    t.style.color = l.color;
+  });
+
+  function setErr(inputId, errId, show, msg) {
+    document.getElementById(inputId).classList.toggle('error', show);
+    const e = document.getElementById(errId);
+    e.classList.toggle('visible', show);
+    if (msg) e.textContent = msg;
+  }
+
+  function showAlert(type, msg) {
+    const b = document.getElementById('alert-box');
+    b.className = `alert ${type} visible`;
+    b.textContent = msg;
+  }
+
+  function clearAlert() {
+    const b = document.getElementById('alert-box');
+    b.className = 'alert';
+    b.textContent = '';
+  }
+
+  function validateRegister() {
+    let ok = true;
+    const email   = document.getElementById('email').value.trim();
+    const pass    = document.getElementById('password').value;
+    const confirm = document.getElementById('confirm-password').value;
+
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    setErr('email', 'err-email', !emailOk);
+    if (!emailOk) ok = false;
+
+    const passOk = pass.length >= 8;
+    setErr('password', 'err-password', !passOk);
+    if (!passOk) ok = false;
+
+    const confirmOk = pass === confirm && confirm.length > 0;
+    setErr('confirm-password', 'err-confirm', !confirmOk);
+    if (!confirmOk) ok = false;
+
+    return ok;
+  }
+
+  function setStep(n) {
+    for (let i = 1; i <= 3; i++) {
+      const c = document.getElementById(`sc${i}`);
+      const l = document.getElementById(`sl${i}`);
+      c.className = 'step-circle' + (i < n ? ' done' : i === n ? ' active' : '');
+      l.className = 'step-label'  + (i < n ? ' done' : i === n ? ' active' : '');
+      c.textContent = i < n ? '✓' : String(i);
+    }
+    for (let j = 1; j <= 2; j++) {
+      document.getElementById(`line${j}`).className = 'step-line' + (j < n ? ' done' : '');
+    }
+  }
+
+  const otpBoxes = document.querySelectorAll('.otp-box');
+  otpBoxes.forEach((box, idx) => {
+    box.addEventListener('input', () => {
+      box.value = box.value.replace(/\D/g, '').slice(0, 1);
+      if (box.value && idx < otpBoxes.length - 1) otpBoxes[idx + 1].focus();
+    });
+    box.addEventListener('keydown', e => {
+      if (e.key === 'Backspace' && !box.value && idx > 0) otpBoxes[idx - 1].focus();
+    });
+    box.addEventListener('paste', e => {
+      if (idx !== 0) return;
+      e.preventDefault();
+      const pasted = (e.clipboardData || window.clipboardData)
+        .getData('text').replace(/\D/g, '').slice(0, 6);
+      pasted.split('').forEach((ch, i) => { if (otpBoxes[i]) otpBoxes[i].value = ch; });
+      const last = otpBoxes[pasted.length - 1];
+      if (last) last.focus();
+    });
+  });
+
+  function getOtpValue() { return [...otpBoxes].map(b => b.value).join(''); }
+  function clearOtpBoxes() {
+    otpBoxes.forEach(b => { b.value = ''; b.classList.remove('error'); });
+    otpBoxes[0].focus();
+  }
+  function markOtpError() {
+    otpBoxes.forEach(b => b.classList.add('error'));
+    setTimeout(() => otpBoxes.forEach(b => b.classList.remove('error')), 500);
+  }
+
+  function startTimer(seconds) {
+    clearInterval(timerInterval);
+    let remaining = seconds;
+    document.getElementById('timer-text').style.display = '';
+
+    function tick() {
+      const m = String(Math.floor(remaining / 60)).padStart(1, '0');
+      const s = String(remaining % 60).padStart(2, '0');
+      document.getElementById('timer-count').textContent = `${m}:${s}`;
+      document.getElementById('resend-btn').disabled = (remaining > 90);
+
+      if (remaining <= 0) {
+        clearInterval(timerInterval);
+        document.getElementById('timer-text').style.display = 'none';
+      }
+      remaining--;
+    }
+    tick();
+    timerInterval = setInterval(tick, 1000);
+  }
+
+  function showPanel(id) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+
+  function goBack() {
+    clearAlert();
+    clearInterval(timerInterval);
+    showPanel('panel-register');
+    setStep(1);
+    document.getElementById('subtitle').textContent = 'Create an account to get started.';
+    document.getElementById('footer-link').style.display = '';
+  }
+
+  function setLoading(btnId, spinId, txtId, loading, label) {
+    document.getElementById(btnId).disabled = loading;
+    document.getElementById(spinId).style.display = loading ? 'block' : 'none';
+    document.getElementById(txtId).textContent = label;
+  }
+
+  // STEP 1: Registration
+  document.getElementById('btn-register').addEventListener('click', async () => {
+    clearAlert();
+    if (!validateRegister()) return;
+
+    const email = document.getElementById('email').value.trim();
+    const pass = document.getElementById('password').value;
+    const confirm = document.getElementById('confirm-password').value;
+    const roleElem = document.querySelector('input[name="role"]:checked');
+    const role = roleElem ? roleElem.value : 'jobseeker';
+
+    setLoading('btn-register', 'spin1', 'btn1-text', true, 'Sending OTP...');
+
+    try {
+      const res = await fetch('/users/register-test/', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          user_email: email,
+          password: pass,
+          confirm_password: confirm,
+          role: role,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.status === 200) {
+        userEmail = email;
+        verifyToken = data.verify_token;
+        document.getElementById('otp-email-display').textContent = email;
+        document.getElementById('subtitle').textContent = 'Verify the email address.';
+        clearAlert();
+        showPanel('panel-otp');
+        setStep(2);
+        startTimer(120);
+        clearOtpBoxes();
+      } else if (res.status === 429) {
+        showAlert('warning', data.error || 'Too many OTP requests. Try again after 5 minutes.');
+      } else {
+        showAlert('error', data.error || 'Registration failed. Check details.');
+      }
+    } catch {
+      showAlert('error', 'Network error. Please check your connection and try again.');
+    } finally {
+      setLoading('btn-register', 'spin1', 'btn1-text', false, 'Send OTP');
+    }
+  });
+
+  // STEP 2: OTP Verification
+  document.getElementById('btn-verify').addEventListener('click', async () => {
+    clearAlert();
+    const otp = getOtpValue();
+
+    if (otp.length < 6) {
+      showAlert('error', 'Please enter all 6 digits of your OTP.');
+      markOtpError();
+      return;
+    }
+
+    setLoading('btn-verify', 'spin2', 'btn2-text', true, 'Verifying...');
+
+    try {
+      const res = await fetch('/users/verify-email-otp-test/', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          verify_token: verifyToken, 
+          otp: otp,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        clearInterval(timerInterval);
+        showPanel('panel-success');
+        setStep(3);
+        document.getElementById('subtitle').textContent = 'All Set!';
+        document.getElementById('footer-link').style.display = 'none';
+      } else {
+        showAlert('error', data.error || 'Verification failed. Please try again.');
+        markOtpError();
+        clearOtpBoxes();
+      }
+    } catch {
+      showAlert('error', 'Network error. Please try again.');
+    } finally {
+      setLoading('btn-verify', 'spin2', 'btn2-text', false, 'Verify & Create Account');
+    }
+  });
+
+  // Resend OTP
+  async function resendOtp() {
+    clearAlert();
+    document.getElementById('resend-btn').disabled = true;
+
+    try {
+      const res = await fetch('/users/resend-otp-test/', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'same-origin',
+        body: JSON.stringify({ verify_token: verifyToken }),
+      });
+
+      const data = await res.json();
+
+      if (res.status === 200) {
+        showAlert('success', 'A new OTP has been sent to your email.');
+        startTimer(120);
+        clearOtpBoxes();
+      } else if (res.status === 429) {
+        showAlert('warning', data.error || 'Too many OTP requests. Please wait 5 minutes.');
+      } else {
+        showAlert('error', data.error || 'Could not resend OTP.');
+        document.getElementById('resend-btn').disabled = false;
+      }
+    } catch {
+      showAlert('error', 'Network error. Please try again.');
+      document.getElementById('resend-btn').disabled = false;
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    setupRoleCards();
+    checkAdminStatus();
+  });
+</script>
+</body>
+</html>

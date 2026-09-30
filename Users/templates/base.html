@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    
+    <title>{% block title %}JobPortal{% endblock %}</title>
+
+    <style>
+      /* --- GLOBAL BASE STYLES --- */
+      :root {
+        --nav-bg: #ffffff;
+        --nav-text: #1f2937;
+        --nav-accent: #4f46e5;
+        --nav-hover-bg: #f3f4f6;
+        --border-color: #e5e7eb;
+        --bg-main: #f9fafb;
+        --danger-color: #ef4444;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body { 
+        display: flex; 
+        flex-direction: column; 
+        min-height: 100vh; 
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background-color: var(--bg-main);
+        color: var(--nav-text);
+      }
+
+      main { 
+        flex: 1; 
+        padding: 40px 20px; 
+        max-width: 1200px;
+        width: 100%;
+        margin: 0 auto;
+      }
+
+      footer { 
+        text-align: center; 
+        color: #666; 
+        padding: 2rem;
+        background: #f4f4f4; 
+        border-top: 1px solid var(--border-color);
+      }
+
+      /* --- NAVBAR COMPONENT STYLES --- */
+      .navbar-header {
+        background-color: var(--nav-bg);
+        border-bottom: 1px solid var(--border-color);
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        width: 100%;
+      }
+
+      .navbar-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 20px;
+        height: 70px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .navbar-logo {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--nav-text);
+        text-decoration: none;
+        letter-spacing: -0.5px;
+      }
+
+      .navbar-logo span {
+        color: var(--nav-accent);
+      }
+
+      .navbar-menu {
+        display: flex;
+        gap: 8px;
+      }
+
+      .navbar-item {
+        color: var(--nav-text);
+        text-decoration: none;
+        font-size: 0.95rem;
+        font-weight: 500;
+        padding: 8px 16px;
+        border-radius: 6px;
+        transition: all 0.2s ease;
+      }
+
+      .navbar-item:hover {
+        background-color: var(--nav-hover-bg);
+        color: var(--nav-accent);
+      }
+
+      .navbar-item.active {
+        color: var(--nav-accent);
+        background-color: #eeebff;
+      }
+
+      .navbar-actions {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+
+      /* User Profile Text Indicator */
+      .navbar-user-profile {
+        display: none; /* Hidden by default, shown when logged in */
+        font-size: 0.9rem;
+        color: #4b5563;
+        font-weight: 500;
+      }
+      
+      .navbar-user-role {
+        background-color: #e0e7ff;
+        color: var(--nav-accent);
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        font-weight: 600;
+        margin-left: 4px;
+      }
+
+      /* Authentication Buttons */
+      .btn-nav-auth {
+        background-color: var(--nav-accent);
+        color: #ffffff;
+        text-decoration: none;
+        padding: 10px 20px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+        transition: opacity 0.2s ease, background-color 0.2s ease;
+      }
+
+      .btn-nav-auth:hover {
+        opacity: 0.9;
+      }
+
+      .btn-nav-logout {
+        background-color: var(--danger-color);
+      }
+
+      .navbar-toggle {
+        display: none;
+        flex-direction: column;
+        justify-content: space-between;
+        width: 24px;
+        height: 18px;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        padding: 0;
+      }
+
+      .navbar-toggle span {
+        width: 100%;
+        height: 2px;
+        background-color: var(--nav-text);
+        border-radius: 2px;
+      }
+
+      /* --- MOBILE RESPONSIVE ENGINE --- */
+      @media (max-width: 768px) {
+        .navbar-toggle {
+          display: flex;
+        }
+
+        .navbar-menu {
+          display: none;
+          flex-direction: column;
+          position: absolute;
+          top: 70px;
+          left: 0;
+          width: 100%;
+          background-color: var(--nav-bg);
+          border-bottom: 1px solid var(--border-color);
+          padding: 20px;
+          gap: 12px;
+          box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05);
+        }
+
+        .navbar-menu.open {
+          display: flex;
+        }
+
+        .navbar-actions {
+          gap: 8px;
+        }
+        
+        .navbar-user-profile {
+          display: none !important; /* Hide user text on small screens */
+        }
+      }
+    </style>
+  </head>
+  <body>
+
+    <header class="navbar-header">
+      <div class="navbar-container">
+        <a href="/users/login/" class="navbar-logo">
+          Job<span>Portel</span>
+        </a>
+
+        <nav class="navbar-menu" id="navbarMenu">
+          <a href="/jobs/" class="navbar-item">Browse Jobs</a>
+          <a href="/companies/" class="navbar-item">Companies</a>
+        </nav>
+
+        <div class="navbar-actions">
+          <div class="navbar-user-profile" id="nav-user-profile">
+            <span id="nav-user-email"></span>
+            <span class="navbar-user-role" id="nav-user-role"></span>
+          </div>
+
+          <a href="/users/login/" class="btn-nav-auth" id="nav-auth-btn">Sign In</a>
+          
+          <button class="navbar-toggle" id="navbarToggle" aria-label="Toggle navigation">
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer>
+      <small>&copy; 2026 JobPortal. All rights reserved.</small>
+    </footer>
+
+    <script>
+      // 1. IN-MEMORY STATE STORAGE
+      window.accessToken = null;
+      window.userRole = null;
+      window.userEmail = null;
+
+      // Global CSRF Recovery Utility
+      window.getCookie = function(name) {
+          let cookieValue = null;
+          if (document.cookie && document.cookie !== '') {
+              const cookies = document.cookie.split(';');
+              for (let i = 0; i < cookies.length; i++) {
+                  const cookie = cookies[i].trim();
+                  if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                      cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                      break;
+                  }
+              }
+          }
+          return cookieValue;
+      };
+
+      // 2. GLOBAL SMART FETCH WRAPPER
+      window.authFetch = async function(url, options = {}) {
+          options.headers = {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': window.getCookie('csrftoken'),
+              ...options.headers
+          };
+
+          if (window.accessToken) {
+              options.headers['Authorization'] = `Bearer ${window.accessToken}`;
+          }
+
+          try {
+              let response = await fetch(url, options);
+
+              const mutatedToken = response.headers.get('X-New-Access-Token');
+              if (mutatedToken) {
+                  console.log("Access token restored by server middleware. Syncing RAM state.");
+                  window.accessToken = mutatedToken;
+              }
+
+              return response;
+          } catch (error) {
+              console.error("Critical error in network transport loop:", error);
+              throw error;
+          }
+      };
+
+      // 3. PERSISTENCE LIFECYCLE ENGINE
+      window.authCheckPromise = (async () => {
+          if (window.location.pathname === '/users/login/') return;
+
+          try {
+              const response = await window.authFetch('/users/details/');
+              
+              if (response && response.ok) {
+                  const userData = await response.json();
+                  window.userRole = userData.role;
+                  window.userEmail = userData.user_email;
+              } else {
+                  window.accessToken = null;
+                  window.userRole = null;
+                  window.userEmail = null;
+                  if (window.location.pathname !== '/users/login/') {
+                      window.location.href = '/users/login/';
+                  }
+              }
+          } catch (err) {
+              console.error("Session boot initialization tracking failed:", err);
+          }
+      })();
+
+      // 4. ROLE-AWARE NAVBAR CONFIGURATOR
+      document.addEventListener('DOMContentLoaded', () => {
+          const navbarToggle = document.getElementById('navbarToggle');
+          const navbarMenu = document.getElementById('navbarMenu');
+          const authBtn = document.getElementById('nav-auth-btn');
+          const userProfileDiv = document.getElementById('nav-user-profile');
+          const userEmailSpan = document.getElementById('nav-user-email');
+          const userRoleSpan = document.getElementById('nav-user-role');
+
+          // Responsive Mobile Layout Drawer Toggle
+          if (navbarToggle && navbarMenu) {
+              navbarToggle.addEventListener('click', () => {
+                  navbarMenu.classList.toggle('open');
+              });
+          }
+
+          // Dynamic Content Renderer based on User Session Role
+          if (window.authCheckPromise) {
+              window.authCheckPromise.then(() => {
+                  if (window.accessToken && window.userRole) {
+                      // 1. Clear generic links
+                      navbarMenu.innerHTML = '';
+
+                      // 2. Inject links conditionally based on role
+                      if (window.userRole === 'admin') {
+                          navbarMenu.innerHTML = `
+                              <a href="/dashboard/admin/" class="navbar-item">Admin Dashboard</a>
+                              <a href="/users/registration/" class="navbar-item">Create User</a>
+                          `;
+                      } else if (window.userRole === 'recruiter') {
+                          navbarMenu.innerHTML = `
+                              <a href="/dashboard/recruiter/" class="navbar-item">Dashboard</a>
+                              <a href="/jobs/posting/" class="navbar-item">Post a Job</a>
+                          `;
+                      } else if (window.userRole === 'jobseeker') {
+                          navbarMenu.innerHTML = `
+                              <a href="/dashboard/jobseeker/" class="navbar-item">Dashboard</a>
+                              <a href="/applyForjob/search/" class="navbar-item">Search Jobs</a>
+                          `;
+                      }
+
+                      // 3. Format and reveal User Profile Details
+                      if (userProfileDiv && userEmailSpan && userRoleSpan) {
+                          userEmailSpan.textContent = window.userEmail || '';
+
+                          // Dynamic Role Badge Formatting
+                          let displayRole = 'User';
+                          if (window.userRole === 'admin') {
+                              displayRole = 'Admin';
+                          } else if (window.userRole === 'recruiter') {
+                              displayRole = 'Recruiter';
+                          } else if (window.userRole === 'jobseeker') {
+                              displayRole = 'Job Seeker';
+                          }
+
+                          userRoleSpan.textContent = displayRole;
+                          userProfileDiv.style.display = 'flex';
+                      }
+
+                      // 4. Convert Sign In to Logout button...
+                      if (authBtn) {
+                          authBtn.innerText = 'Sign Out';
+                          authBtn.href = '#';
+                          authBtn.classList.add('btn-nav-logout');
+                          authBtn.onclick = async (e) => {
+                              e.preventDefault();
+                              try {
+                                  await window.authFetch('/users/logout-test/', { method: 'POST' });
+                              } catch (err) {
+                                  console.error("Logout failure:", err);
+                              } finally {
+                                  window.accessToken = null;
+                                  window.userRole = null;
+                                  window.userEmail = null;
+                                  window.location.href = '/users/login/';
+                              }
+                          };
+                      }
+                  }
+
+                  // Active Link Highlighting
+                  const currentPath = window.location.pathname;
+                  document.querySelectorAll('.navbar-item').forEach(item => {
+                      if (item.getAttribute('href') === currentPath) {
+                          item.classList.add('active');
+                      }
+                  });
+              });
+          }
+      });
+    </script>
+  </body>
+</html>

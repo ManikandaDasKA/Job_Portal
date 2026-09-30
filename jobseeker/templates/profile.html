@@ -1,0 +1,736 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div id="toast-notification" class="toast-popup"></div>
+
+<div class="max-w-7xl mx-auto space-y-6">
+    <form id="profileForm">
+        {% csrf_token %}
+
+        <div class="profile-layout">
+
+            <div class="left-column">
+                <div class="card sticky-card">
+                    <h2 class="title">Personal Info</h2>
+
+                    <input name="full_name" placeholder="Full Name" class="input">
+                    <input name="phone_number" placeholder="Phone Number" class="input">
+                    <input name="headline" placeholder="Headline" class="input">
+                    <textarea name="bio" placeholder="Bio" class="input"></textarea>
+
+                    <div class="flex gap-4 gender-group">
+                        <label><input type="radio" name="gender" value="male"> Male</label>
+                        <label><input type="radio" name="gender" value="female"> Female</label>
+                        <label><input type="radio" name="gender" value="other"> Other</label>
+                    </div>
+                    
+                    <button type="button" id="save-profile-btn" onclick="createProfile()" class="btn-save">
+                        Save Profile
+                    </button>
+
+                    <button type="button" id="update-profile-btn" onclick="updateProfile()" class="btn-update mt-3 w-full hidden">
+                        Update Profile
+                    </button>
+                </div>
+            </div>
+
+            <div class="right-column">
+
+                <div class="card">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="title mb-0">Skills</h2>
+                        <button type="button" onclick="addSkill()" class="btn-add">+ Add</button>
+                    </div>
+                    <div id="skills-container"></div>
+                </div>
+
+                <div class="card">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="title mb-0">Locations</h2>
+                        <button type="button" onclick="addLocation()" class="btn-add">+ Add</button>
+                    </div>
+                    <div id="locations-container"></div>
+                </div>
+
+                <div class="card">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="title mb-0">Experience</h2>
+                        <button type="button" onclick="addExperience()" class="btn-add">+ Add</button>
+                    </div>
+                    <div id="experience-container"></div>
+                </div>
+
+                <div class="card">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="title mb-0">Education</h2>
+                        <button type="button" onclick="addEducation()" class="btn-add">+ Add</button>
+                    </div>
+                    <div id="education-container"></div>
+                </div>
+
+            </div>
+        </div>
+    </form>
+</div>
+
+<style>
+body {
+    background: #f1f5f9;
+}
+
+/* Toast Popup */
+.toast-popup {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-20px);
+    z-index: 9999;
+    padding: 12px 24px;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    font-size: 15px;
+    font-weight: 600;
+    text-align: center;
+    min-width: 280px;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.toast-popup.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+}
+
+.toast-success {
+    background: #10b981;
+    color: white;
+}
+
+.toast-error {
+    background: #ef4444;
+    color: white;
+}
+
+/* Main Layout */
+.profile-layout {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 20px;
+    align-items: start;
+}
+
+/* Left Side */
+.left-column {
+    position: sticky;
+    top: 20px;
+}
+
+/* Right Side Grid */
+.right-column {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    align-items: start;
+}
+
+.right-column .card {
+    min-height: 240px;
+}
+
+/* Cards */
+.card {
+    background: #ffffff;
+    padding: 20px;
+    border-radius: 14px;
+    border: 1px solid #dbe3ef;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+    box-sizing: border-box;
+    width: 100%;
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.10);
+}
+
+.title {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 20px;
+}
+
+.mb-0 {
+    margin-bottom: 0 !important;
+}
+
+/* Inputs */
+.input {
+    width: 100%;
+    margin-bottom: 14px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid #d1d5db;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.input:focus {
+    border-color: #6366f1;
+}
+
+/* Buttons */
+.btn-add {
+    background: #6366f1;
+    color: white;
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-save {
+    background: #10b981;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 15px;
+    box-sizing: border-box;
+}
+
+.btn-update {
+    background: #3b82f6;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-delete {
+    background: #ef4444;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+}
+
+.w-full { width: 100%; }
+.mt-3 { margin-top: 12px; }
+
+/* Hidden utility class */
+.hidden { display: none !important; }
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .profile-layout {
+        grid-template-columns: 1fr;
+    }
+    .left-column {
+        position: static;
+    }
+    .right-column {
+        grid-template-columns: 1fr;
+    }
+}
+
+.left-column .input,
+.left-column textarea {
+    width: 100%;
+    max-width: 100%;
+}
+
+.gender-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 10px;
+    margin-bottom: 15px;
+}
+
+.dynamic-block {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 18px;
+    margin-bottom: 18px;
+}
+
+.field-label {
+    display: block;
+    margin: 10px 0 6px;
+    font-weight: 600;
+    color: #374151;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 14px 0;
+    font-size: 14px;
+}
+</style>
+
+<script>
+// ─────────── AUTHENTICATION WRAPPER ───────────
+async function authFetch(url, options = {}) {
+    options.credentials = 'same-origin'; // Crucial for sending session cookies
+    options.headers = {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        ...options.headers
+    };
+
+    // CHANGES: Injects the layout's active in-memory access token into the Bearer header block
+    if (window.accessToken) {
+        options.headers['Authorization'] = `Bearer ${window.accessToken}`;
+    }
+
+    try {
+        const response = await fetch(url, options);
+
+        // CHANGES: Synchronizes runtime storage memory if layout middleware issues updated tokens
+        const mutatedToken = response.headers.get('X-New-Access-Token');
+        if (mutatedToken) {
+            console.log("Updating local context with refreshed token from middleware.");
+            window.accessToken = mutatedToken;
+        }
+
+        if (response.status === 401 || response.status === 403) {
+            console.error("Authorization failed. Redirecting to login...");
+            window.accessToken = null; // Clear out sync state memory
+            window.location.href = '/users/login/';
+            return null;
+        }
+
+        return response;
+    } catch (err) {
+        console.error("Network Error:", err);
+        showToast('error', 'Network error. Please try again.');
+        return null;
+    }
+}
+
+// ─────────── TOAST NOTIFICATION ───────────
+let toastTimeout;
+function showToast(type, msg) {
+    const toast = document.getElementById('toast-notification');
+    
+    // Set message
+    toast.innerText = msg;
+    
+    // Reset classes
+    toast.className = 'toast-popup'; 
+    
+    // Apply styling based on type
+    if (type === 'error') {
+        toast.classList.add('toast-error');
+    } else {
+        toast.classList.add('toast-success');
+    }
+    
+    // Trigger animation
+    toast.classList.add('show');
+    
+    // Hide after 3 seconds
+    clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => {
+        toast.classList.remove('show');
+    }, 3000);
+}
+
+// Controls visibility of Save vs Update buttons
+function toggleProfileButtons(isUpdateMode) {
+    const saveBtn = document.getElementById('save-profile-btn');
+    const updateBtn = document.getElementById('update-profile-btn');
+    
+    if (isUpdateMode) {
+        saveBtn.classList.add('hidden');
+        updateBtn.classList.remove('hidden');
+    } else {
+        saveBtn.classList.remove('hidden');
+        updateBtn.classList.add('hidden');
+    }
+}
+
+// ─────────── PROFILE LOGIC ───────────
+function getProfilePayload() {
+    return {
+        full_name: document.querySelector('[name="full_name"]').value,
+        phone_number: document.querySelector('[name="phone_number"]').value,
+        headline: document.querySelector('[name="headline"]').value,
+        bio: document.querySelector('[name="bio"]').value,
+        gender: document.querySelector('input[name="gender"]:checked')?.value
+    };
+}
+
+async function createProfile() {
+    const payload = getProfilePayload();
+    const res = await authFetch('/jobseeker/profile/', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+    });
+    
+    if (!res) return; // authFetch handled the error
+    
+    const data = await res.json();
+    if (data.success) {
+        showToast('success', "Profile Created Successfully");
+        // Switch to Update mode after successful creation
+        toggleProfileButtons(true);
+    } else {
+        showToast('error', JSON.stringify(data.errors || data));
+    }
+}
+
+async function updateProfile() {
+    const payload = getProfilePayload();
+    const res = await authFetch('/jobseeker/profile/', {
+        method: 'PATCH',
+        body: JSON.stringify(payload)
+    });
+    
+    if (!res) return; 
+
+    const data = await res.json();
+    if (data.success) {
+        showToast('success', "Profile Updated Successfully");
+    } else {
+        showToast('error', JSON.stringify(data.errors || data));
+    }
+}
+
+// ─────────── COMMON DELETE & TOGGLE ───────────
+async function deleteItem(btn, type) {
+    const el = btn.closest('.dynamic-block');
+    const id = el.querySelector('input[type=hidden]').value;
+
+    if (id) {
+        const res = await authFetch(`/jobseeker/profile/${type}/${id}/`, {
+            method: 'DELETE'
+        });
+        if (!res) return;
+    }
+    el.remove();
+    showToast('success', 'Item Deleted');
+}
+
+function toggleCurrent(checkbox) {
+    const block = checkbox.closest(".dynamic-block");
+    const endDate = block.querySelector(".end-date");
+    const endYear = block.querySelector(".end-year");
+
+    if (endDate) {
+        endDate.disabled = checkbox.checked;
+        if (checkbox.checked) endDate.value = "";
+    }
+    if (endYear) {
+        endYear.disabled = checkbox.checked;
+        if (checkbox.checked) endYear.value = "";
+    }
+}
+
+// ─────────── SKILLS ───────────
+function addSkill(data = {}) {
+    const div = document.createElement('div');
+    div.className = "dynamic-block";
+    div.innerHTML = `
+        <input type="hidden" value="${data.skill_id || ''}">
+        <input class="input" value="${data.skill_name || ''}" placeholder="Skill">
+        <button type="button" onclick="saveSkill(this)" class="btn-update">Save</button>
+        <button type="button" onclick="deleteItem(this,'skill')" class="btn-delete">Delete</button>
+    `;
+    document.getElementById('skills-container').appendChild(div);
+}
+
+async function saveSkill(btn) {
+    const el = btn.closest('.dynamic-block');
+    const id = el.children[0].value;
+    const res = await authFetch(
+        id ? `/jobseeker/profile/skill/${id}/` : '/jobseeker/profile/skill/',
+        {
+            method: id ? 'PATCH' : 'POST',
+            body: JSON.stringify({ skill_name: el.children[1].value })
+        }
+    );
+    
+    if (!res) return;
+    
+    const d = await res.json();
+    if (!id && d.success) {
+        el.children[0].value = d.data.skill_id;
+        showToast('success', 'Skill saved');
+    } else if (d.success) {
+        showToast('success', 'Skill updated');
+    } else {
+        showToast('error', JSON.stringify(d.errors || 'Failed to save skill'));
+    }
+}
+
+// ─────────── LOCATION ───────────
+function addLocation(data = {}) {
+    const div = document.createElement('div');
+    div.className = "dynamic-block";
+    div.innerHTML = `
+        <input type="hidden" value="${data.location_id || ''}">
+        <input class="input" value="${data.location_name || ''}" placeholder="Location">
+        <button type="button" onclick="saveLocation(this)" class="btn-update">Save</button>
+        <button type="button" onclick="deleteItem(this,'location')" class="btn-delete">Delete</button>
+    `;
+    document.getElementById('locations-container').appendChild(div);
+}
+
+async function saveLocation(btn) {
+    const el = btn.closest('.dynamic-block');
+    const id = el.children[0].value;
+    const res = await authFetch(
+        id ? `/jobseeker/profile/location/${id}/` : '/jobseeker/profile/location/',
+        {
+            method: id ? 'PATCH' : 'POST',
+            body: JSON.stringify({ location_name: el.children[1].value })
+        }
+    );
+    
+    if (!res) return;
+    
+    const d = await res.json();
+    if (!id && d.success) {
+        el.children[0].value = d.data.location_id;
+        showToast('success', 'Location saved');
+    } else if (d.success) {
+        showToast('success', 'Location updated');
+    } else {
+        showToast('error', JSON.stringify(d.errors || 'Failed to save location'));
+    }
+}
+
+// ─────────── EXPERIENCE ───────────
+function addExperience(data = {}) {
+    const container = document.getElementById("experience-container");
+    const block = document.createElement("div");
+    block.className = "dynamic-block";
+    const isUpdate = data.experience_id ? true : false;
+
+    block.innerHTML = `
+        <input type="hidden" name="experience_id" value="${data.experience_id || ''}">
+        <input type="text" name="company_name" class="input" placeholder="Company Name" value="${data.company_name || ''}" required>
+        <input type="text" name="role" class="input" placeholder="Role" value="${data.role || ''}" required>
+        <textarea name="description" class="input" placeholder="Job Description">${data.description || ''}</textarea>
+        
+        <select name="employment_type" class="input" required>
+            <option value="">Select Employment Type</option>
+            <option value="fulltime" ${data.employment_type === 'fulltime' ? 'selected' : ''}>Full Time</option>
+            <option value="parttime" ${data.employment_type === 'parttime' ? 'selected' : ''}>Part Time</option>
+            <option value="intern" ${data.employment_type === 'intern' ? 'selected' : ''}>Internship</option>
+            <option value="contract" ${data.employment_type === 'contract' ? 'selected' : ''}>Contract</option>
+        </select>
+
+        <label class="field-label">Start Date</label>
+        <input type="date" name="start_date" class="input" value="${data.start_date || ''}">
+
+        <label class="field-label">End Date</label>
+        <input type="date" name="end_date" class="input end-date" value="${data.end_date || ''}" ${data.is_current ? 'disabled' : ''}>
+
+        <label class="checkbox-label">
+            <input type="checkbox" name="is_current" ${data.is_current ? 'checked' : ''} onchange="toggleCurrent(this)">
+            I currently work here
+        </label>
+
+        <button type="button" class="btn-update" onclick="saveExperience(this)">
+            ${isUpdate ? 'Update' : 'Save'}
+        </button>
+        <button type="button" class="btn-delete" onclick="deleteItem(this,'experience')">
+            Delete
+        </button>
+    `;
+    container.appendChild(block);
+}
+
+async function saveExperience(btn) {
+    const el = btn.closest('.dynamic-block');
+    const id = el.querySelector('[name="experience_id"]').value;
+    
+    const payload = {
+        company_name: el.querySelector('[name="company_name"]').value,
+        role: el.querySelector('[name="role"]').value,
+        description: el.querySelector('[name="description"]').value,
+        employment_type: el.querySelector('[name="employment_type"]').value,
+        start_date: el.querySelector('[name="start_date"]').value,
+        end_date: el.querySelector('[name="is_current"]').checked ? null : el.querySelector('[name="end_date"]').value,
+        is_current: el.querySelector('[name="is_current"]').checked
+    };
+
+    const url = id ? `/jobseeker/profile/experience/${id}/` : `/jobseeker/profile/experience/`;
+    const method = id ? 'PATCH' : 'POST';
+
+    const res = await authFetch(url, {
+        method: method,
+        body: JSON.stringify(payload)
+    });
+    
+    if (!res) return;
+
+    const d = await res.json();
+    if (d.success) {
+        showToast('success', id ? "Updated Successfully" : "Created Successfully");
+        if (!id) {
+            el.querySelector('[name="experience_id"]').value = d.data.experience_id;
+            btn.innerText = "Update";
+        }
+    } else {
+        showToast('error', JSON.stringify(d.errors || d));
+    }
+}
+
+// ─────────── EDUCATION ───────────
+function addEducation(data = {}) {
+    const container = document.getElementById("education-container");
+    const block = document.createElement("div");
+    block.className = "dynamic-block";
+    const isUpdate = data.education_id ? true : false;
+
+    block.innerHTML = `
+        <input type="hidden" name="education_id" value="${data.education_id || ''}">
+        <input type="text" name="qualification" class="input" placeholder="Qualification" value="${data.qualification || ''}" required>
+        <input type="text" name="field_of_study" class="input" placeholder="Field of Study" value="${data.field_of_study || ''}" required>
+        <input type="text" name="institution" class="input" placeholder="Institution" value="${data.institution || ''}" required>
+
+        <label class="field-label">Start Year</label>
+        <input type="number" name="start_year" class="input" min="1950" max="2100" value="${data.start_year || ''}" required>
+
+        <label class="field-label">End Year</label>
+        <input type="number" name="end_year" class="input end-year" min="1950" max="2100" value="${data.end_year || ''}" ${data.is_current ? 'disabled' : ''}>
+
+        <label class="checkbox-label">
+            <input type="checkbox" name="is_current" ${data.is_current ? 'checked' : ''} onchange="toggleCurrent(this)">
+            Currently Studying Here
+        </label>
+
+        <button type="button" class="btn-update" onclick="saveEducation(this)">
+            ${isUpdate ? 'Update' : 'Save'}
+        </button>
+        <button type="button" class="btn-delete" onclick="deleteItem(this,'education')">
+            Delete
+        </button>
+    `;
+    container.appendChild(block);
+}
+
+async function saveEducation(btn) {
+    const el = btn.closest('.dynamic-block');
+    const id = el.querySelector('[name="education_id"]').value;
+
+    const payload = {
+        qualification: el.querySelector('[name="qualification"]').value,
+        field_of_study: el.querySelector('[name="field_of_study"]').value,
+        institution: el.querySelector('[name="institution"]').value,
+        start_year: parseInt(el.querySelector('[name="start_year"]').value),
+        end_year: el.querySelector('[name="is_current"]').checked ? null : parseInt(el.querySelector('[name="end_year"]').value) || null,
+        is_current: el.querySelector('[name="is_current"]').checked
+    };
+
+    const url = id ? `/jobseeker/profile/education/${id}/` : `/jobseeker/profile/education/`;
+    const method = id ? 'PATCH' : 'POST';
+
+    const res = await authFetch(url, {
+        method: method,
+        body: JSON.stringify(payload)
+    });
+    
+    if (!res) return;
+    
+    const d = await res.json();
+    
+    if (d.success) {
+        showToast('success', id ? "Updated Successfully" : "Created Successfully");
+        if (!id) {
+            el.querySelector('[name="education_id"]').value = d.data.education_id;
+            btn.innerText = "Update";
+        }
+    } else {
+        showToast('error', JSON.stringify(d.errors || d));
+    }
+}
+
+// ─────────── LOAD DATA ON INIT ───────────
+async function loadProfileData() {
+    try {
+        // PROFILE
+        const profileRes = await authFetch('/jobseeker/profile/');
+        if (profileRes && profileRes.ok) {
+            const profileData = await profileRes.json();
+            
+            if (profileData.success && profileData.data && Object.keys(profileData.data).length > 0) {
+                const p = profileData.data;
+                document.querySelector('[name="full_name"]').value = p.full_name || '';
+                document.querySelector('[name="phone_number"]').value = p.phone_number || '';
+                document.querySelector('[name="headline"]').value = p.headline || '';
+                document.querySelector('[name="bio"]').value = p.bio || '';
+                
+                if (p.gender) {
+                    const genderInput = document.querySelector(`input[name="gender"][value="${p.gender}"]`);
+                    if (genderInput) genderInput.checked = true;
+                }
+
+                toggleProfileButtons(true);
+            } else {
+                toggleProfileButtons(false);
+            }
+        }
+
+        // SKILLS
+        const skillRes = await authFetch('/jobseeker/profile/skill/');
+        if (skillRes && skillRes.ok) {
+            const skills = await skillRes.json();
+            if (skills.data) skills.data.forEach(addSkill);
+        }
+
+        // LOCATIONS
+        const locRes = await authFetch('/jobseeker/profile/location/');
+        if (locRes && locRes.ok) {
+            const locations = await locRes.json();
+            if (locations.data) locations.data.forEach(addLocation);
+        }
+
+        // EDUCATION
+        const eduRes = await authFetch('/jobseeker/profile/education/');
+        if (eduRes && eduRes.ok) {
+            const educations = await eduRes.json();
+            if (educations.data) educations.data.forEach(addEducation);
+        }
+
+        // EXPERIENCE
+        const expRes = await authFetch('/jobseeker/profile/experience/');
+        if (expRes && expRes.ok) {
+            const experiences = await expRes.json();
+            if (experiences.data) experiences.data.forEach(addExperience);
+        }
+
+    } catch (error) {
+        console.error("Load Error:", error);
+    }
+}
+
+// CHANGES: Implemented a safe polling execution check. This guards against race conditions 
+// by waiting for layout init initialization workflows before running endpoints on DOMContentLoaded.
+document.addEventListener('DOMContentLoaded', () => {
+    const checkAuthAndLoad = () => {
+        if (window.accessToken !== undefined) {
+            loadProfileData();
+        } else {
+            setTimeout(checkAuthAndLoad, 50); // Checks again in 50ms if boot layout setup hasn't run yet
+        }
+    };
+    checkAuthAndLoad();
+});
+</script>
+
+{% endblock %}

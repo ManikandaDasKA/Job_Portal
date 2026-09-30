@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Applied Candidates | JobPortal{% endblock %}
+
+{% block content %}
+<style>
+    .applied-container {
+        max-width: 1000px;
+        margin: auto;
+    }
+    .header-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+    .candidate-card {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        overflow: hidden;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    th {
+        background: #f8f9fa;
+        text-align: left;
+        padding: 12px 15px;
+        border-bottom: 2px solid #eee;
+        color: #555;
+    }
+    td {
+        padding: 12px 15px;
+        border-bottom: 1px solid #eee;
+    }
+    tr:last-child td { border-bottom: none; }
+    .status-pill {
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: bold;
+        background: #e9ecef;
+    }
+    .loading-overlay {
+        text-align: center;
+        padding: 50px;
+        color: #666;
+    }
+    .btn-view {
+        padding: 6px 12px;
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+    }
+    .error-box {
+        color: #721c24;
+        background-color: #f8d7da;
+        border: 1px solid #f5c6cb;
+        padding: 15px;
+        border-radius: 4px;
+        display: none;
+    }
+</style>
+
+<div class="applied-container">
+    <div class="header-bar">
+        <h2 id="job-title">Loading Job...</h2>
+        <a href="javascript:history.back()" style="color: #666; text-decoration: none;">&larr; Back</a>
+    </div>
+
+    <div id="error-msg" class="error-box"></div>
+
+    <div id="loading" class="loading-overlay">
+        <p>Fetching applicants, please wait...</p>
+    </div>
+
+    <div id="content-table" class="candidate-card" style="display: none;">
+        <table>
+            <thead>
+                <tr>
+                    <th>Candidate Name</th>
+                    <th>Email</th>
+                    <th>Applied Date</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="candidate-rows">
+                </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        // The job_id comes from your AppliedCandidatesView context
+        const jobId = "{{ job_id }}"; 
+        const errorBox = document.getElementById('error-msg');
+        const loading = document.getElementById('loading');
+        const content = document.getElementById('content-table');
+        const jobTitle = document.getElementById('job-title');
+        const tableBody = document.getElementById('candidate-rows');
+
+        try {
+            // Using your global authFetch from base.html
+            const response = await window.authFetch(`data/`);
+
+            if (!response || !response.ok) {
+                throw new Error("Could not fetch candidate data. Make sure you're authorized.");
+            }
+
+            const data = await response.json();
+            
+            // Update Page Title
+            jobTitle.textContent = `Applicants: ${data.job_title}`;
+
+            if (data.candidates.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:30px;">No candidates have applied for this job yet.</td></tr>`;
+            } else {
+                tableBody.innerHTML = data.candidates.map(c => `
+                    <tr>
+                        <td><strong>${c.candidate_name}</strong></td>
+                        <td>${c.candidate_email}</td>
+                        <td>${c.applied_at}</td>
+                        <td><span class="status-pill">${c.status}</span></td>
+                        <td>
+                            <a href="/applications/apply/${c.application_id}/" class="btn-view">View</a>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+
+            loading.style.display = 'none';
+            content.style.display = 'block';
+
+        } catch (err) {
+            loading.style.display = 'none';
+            errorBox.textContent = err.message;
+            errorBox.style.display = 'block';
+            jobTitle.textContent = "Error";
+        }
+    });
+</script>
+{% endblock %}

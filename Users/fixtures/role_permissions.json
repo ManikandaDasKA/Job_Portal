@@ -1,0 +1,35 @@
+[
+  { "model": "Users.rolepermission", "pk": 1,  "fields": { "role": "recruiter", "resource": "jobs",          "can_read": true,  "can_write": true,  "can_delete": true }},
+  { "model": "Users.rolepermission", "pk": 2,  "fields": { "role": "recruiter", "resource": "resume",        "can_read": true,  "can_write": false, "can_delete": false }},
+  { "model": "Users.rolepermission", "pk": 3,  "fields": { "role": "recruiter", "resource": "applications",  "can_read": true,  "can_write": true,  "can_delete": false }},
+  { "model": "Users.rolepermission", "pk": 4,  "fields": { "role": "recruiter", "resource": "users",         "can_read": false, "can_write": false, "can_delete": false }},
+  { "model": "Users.rolepermission", "pk": 5,  "fields": { "role": "recruiter", "resource": "company",       "can_read": true,  "can_write": true,  "can_delete": true }},
+  { "model": "Users.rolepermission", "pk": 6,  "fields": { "role": "recruiter", "resource": "messages",      "can_read": true,  "can_write": true,  "can_delete": false }},
+  { "model": "Users.rolepermission", "pk": 7,  "fields": { "role": "recruiter", "resource": "notifications", "can_read": true,  "can_write": false, "can_delete": false }},
+  { "model": "Users.rolepermission", "pk": 8,  "fields": { "role": "recruiter", "resource": "subscriptions", "can_read": true,  "can_write": true,  "can_delete": false }},
+
+  { "model": "Users.rolepermission", "pk": 9,  "fields": { "role": "jobseeker", "resource": "profile",       "can_read": true,  "can_write": true,  "can_delete": true }},
+  { "model": "Users.rolepermission", "pk": 10, "fields": { "role": "jobseeker", "resource": "location",      "can_read": true,  "can_write": true,  "can_delete": true }},
+  { "model": "Users.rolepermission", "pk": 11, "fields": { "role": "jobseeker", "resource": "education",     "can_read": true,  "can_write": true,  "can_delete": true }},
+  { "model": "Users.rolepermission", "pk": 12, "fields": { "role": "jobseeker", "resource": "experience",    "can_read": true,  "can_write": true,  "can_delete": true }},
+  { "model": "Users.rolepermission", "pk": 13, "fields": { "role": "jobseeker", "resource": "skill",         "can_read": true,  "can_write": true,  "can_delete": true }},
+
+  { "model": "Users.rolepermission", "pk": 14, "fields": { "role": "jobseeker", "resource": "jobs",          "can_read": true,  "can_write": false, "can_delete": false }},
+  { "model": "Users.rolepermission", "pk": 15, "fields": { "role": "jobseeker", "resource": "resume",        "can_read": true,  "can_write": true,  "can_delete": true }},
+  { "model": "Users.rolepermission", "pk": 16, "fields": { "role": "jobseeker", "resource": "applications",  "can_read": true,  "can_write": true,  "can_delete": true }},
+  { "model": "Users.rolepermission", "pk": 17, "fields": { "role": "jobseeker", "resource": "users",         "can_read": false, "can_write": false, "can_delete": false }},
+  { "model": "Users.rolepermission", "pk": 18, "fields": { "role": "jobseeker", "resource": "company",       "can_read": true,  "can_write": false, "can_delete": false }},
+  { "model": "Users.rolepermission", "pk": 19, "fields": { "role": "jobseeker", "resource": "messages",      "can_read": true,  "can_write": true,  "can_delete": false }},
+  { "model": "Users.rolepermission", "pk": 20, "fields": { "role": "jobseeker", "resource": "notifications", "can_read": true,  "can_write": false, "can_delete": false }},
+  { "model": "Users.rolepermission", "pk": 21, "fields": { "role": "jobseeker", "resource": "subscriptions", "can_read": true,  "can_write": true,  "can_delete": false }},
+
+  { "model": "Users.rolepermission", "pk": 22, "fields": { "role": "admin", "resource": "profile",        "can_read": true,  "can_write": true,  "can_delete": true }},
+  { "model": "Users.rolepermission", "pk": 23, "fields": { "role": "admin", "resource": "jobs",           "can_read": true,  "can_write": true,  "can_delete": true }},
+  { "model": "Users.rolepermission", "pk": 24, "fields": { "role": "admin", "resource": "resume",         "can_read": true,  "can_write": true,  "can_delete": true }},
+  { "model": "Users.rolepermission", "pk": 25, "fields": { "role": "admin", "resource": "applications",   "can_read": true,  "can_write": true,  "can_delete": true }},
+  { "model": "Users.rolepermission", "pk": 26, "fields": { "role": "admin", "resource": "users",          "can_read": true,  "can_write": true,  "can_delete": true }},
+  { "model": "Users.rolepermission", "pk": 27, "fields": { "role": "admin", "resource": "company",        "can_read": true,  "can_write": true,  "can_delete": true }},
+  { "model": "Users.rolepermission", "pk": 28, "fields": { "role": "admin", "resource": "messages",       "can_read": true,  "can_write": true,  "can_delete": true }},
+  { "model": "Users.rolepermission", "pk": 29, "fields": { "role": "admin", "resource": "notifications",  "can_read": true,  "can_write": true,  "can_delete": true }},
+  { "model": "Users.rolepermission", "pk": 30, "fields": { "role": "admin", "resource": "subscriptions",  "can_read": true,  "can_write": true,  "can_delete": true }}
+]
