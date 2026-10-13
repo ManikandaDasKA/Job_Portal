@@ -94,7 +94,7 @@ class MarkNotificationReadView(APIView):
                 notification.is_read = True
                 notification.read_at = timezone.now()
                
-                await notification.asave(update_fields=["is_read", "read_at", "updated_at"])
+                await notification.asave(update_fields=["is_read", "read_at"])
                 logger.info(f"[MarkNotificationReadView PATCH] Row committed cleanly to db storage for notification_id={pk}")
             else:
                 logger.debug(f"[MarkNotificationReadView PATCH] Item {pk} was already read. Skipping state update pipeline.")

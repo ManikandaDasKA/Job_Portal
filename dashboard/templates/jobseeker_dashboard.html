@@ -420,13 +420,49 @@
 </div>
 
 <script>
-    // Navigation wrapper to verify token before changing pages
+    // --- 1. Authentication Fetch Wrapper (If not defined in base.html) ---
+    // This ensures your Authorization header is passed with every request.
+    if (typeof window.authFetch === 'undefined') {
+        window.authFetch = async function(url, options = {}) {
+            // Retrieve your token (Adjust 'access_token' to match what you use)
+            const token = localStorage.getItem('access_token'); 
+            
+            const headers = {
+                'Content-Type': 'application/json',
+                ...(options.headers || {})
+            };
+
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            return fetch(url, { ...options, headers });
+        };
+    }
+
+    // --- 2. Enforce Login Redirect ---
+    const LOGIN_URL = '/login/'; // Change this to your actual login route URL
+
+    function handleUnauthorized() {
+        console.warn("Unauthorized access. Redirecting to login...");
+        // Optional: clear bad tokens
+        localStorage.removeItem('access_token'); 
+        localStorage.removeItem('refresh_token');
+        window.location.href = LOGIN_URL;
+    }
+
+    // --- 3. Secure Navigation ---
     async function secureNavigate(targetUrl) {
-        const response = await window.authFetch('/users/details/');
-        if (response && response.ok) {
-            window.location.href = targetUrl;
-        } else {
-            console.warn("Unauthorized access attempt.");
+        try {
+            const response = await window.authFetch('/users/details/');
+            if (response && response.ok) {
+                window.location.href = targetUrl;
+            } else {
+                handleUnauthorized();
+            }
+        } catch (error) {
+            console.error("Navigation auth check failed:", error);
+            handleUnauthorized();
         }
     }
 
@@ -441,14 +477,15 @@
         return new Date(dateString).toLocaleDateString('en-US', options);
     }
 
-    // --- Core Dashboard Fetch ---
+    // --- 4. Core Dashboard Fetch ---
     function loadDashboardData() {
         window.authFetch('/dashboard/jobseeker/data/')
             .then(response => {
                 if (!response) return; 
                 if (!response.ok) {
-                    if (response.status === 401) {
+                    if (response.status === 401 || response.status === 403) {
                         showError('Session expired. Please log in again.');
+                        handleUnauthorized(); // Force redirect here
                     }
                     throw new Error('HTTP error! status: ' + response.status);
                 }
@@ -458,12 +495,11 @@
                 if (data) populateDashboard(data);
             })
             .catch(error => {
-                console.error('Error:', error);
-                // Optionally show error to user
+                console.error('Error fetching dashboard data:', error);
             });
     }
 
-    // --- Fetch Unread Notifications Count ---
+    // --- 5. Fetch Unread Notifications Count ---
     async function fetchUnreadCount() {
         try {
             const response = await window.authFetch('/notification/unread-count/');
@@ -477,13 +513,15 @@
                 } else {
                     badge.style.display = 'none';
                 }
+            } else if (response.status === 401) {
+                handleUnauthorized();
             }
         } catch (error) {
             console.error('Failed to load unread count:', error);
         }
     }
 
-    // --- Populate UI Logic ---
+    // --- 6. Populate UI Logic ---
     function populateDashboard(data) {
         if (data.user) {
             document.querySelector('.header-content h1').textContent = 'Welcome, ' + escapeHtml(data.user) + '! 👋';
@@ -562,26 +600,16 @@
         setTimeout(() => errorDiv.remove(), 5000);
     }
 
-    // --- Initialization & Polling ---
+    // --- 7. Initialization & Polling ---
     document.addEventListener('DOMContentLoaded', () => {
-        // Safe polling to wait for global authFetch/accessToken to be ready
-        const checkAuthAndLoad = () => {
-            if (window.authFetch !== undefined) {
-                loadDashboardData();
-                fetchUnreadCount();
-            } else {
-                setTimeout(checkAuthAndLoad, 50);
-            }
-        };
-        checkAuthAndLoad();
+        loadDashboardData();
+        fetchUnreadCount();
     });
 
     // Refresh dashboard stats and notification count every 30 seconds
     setInterval(() => {
-        if (window.authFetch !== undefined) {
-            loadDashboardData();
-            fetchUnreadCount(); 
-        }
+        loadDashboardData();
+        fetchUnreadCount(); 
     }, 30000);
 </script>
 

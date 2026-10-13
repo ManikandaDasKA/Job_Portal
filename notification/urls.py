@@ -3,7 +3,7 @@ from .views import NotificationListView, MarkNotificationReadView, NotificationU
 
 urlpatterns = [
     path('inbox/', notification_page_view, name='notification-page'),
-    path('', NotificationListView.as_view(), name='notifications'),
+    path('list/view/', NotificationListView.as_view(), name='notifications'),
     path('<uuid:pk>/read/', MarkNotificationReadView.as_view(), name='mark-read'),
     path('unread-count/', NotificationUnreadCountView.as_view(), name='unread-count'),
 ]

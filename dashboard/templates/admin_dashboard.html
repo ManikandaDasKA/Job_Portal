@@ -45,13 +45,52 @@
     margin-top: 0.25rem;
   }
 
-  .badge-count {
+  /* Nav Tabs */
+  .tab-group {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--neutral-200);
+    padding-bottom: 8px;
+  }
+
+  .tab-btn {
+    background: none;
+    border: none;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--neutral-600);
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+  }
+
+  .tab-btn:hover {
+    background: var(--neutral-100);
+    color: var(--neutral-900);
+  }
+
+  .tab-btn.active {
     background: #eef5fc;
     color: var(--admin-primary);
-    padding: 0.35rem 0.8rem;
-    border-radius: 20px;
-    font-size: 0.85rem;
+  }
+
+  .tab-badge {
+    background: var(--neutral-200);
+    color: var(--neutral-700);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
     font-weight: 700;
+  }
+
+  .tab-btn.active .tab-badge {
+    background: var(--admin-primary);
+    color: #fff;
   }
 
   .admin-card {
@@ -144,6 +183,7 @@
     text-transform: uppercase;
   }
   .status-pending { background: #fef3c7; color: #b45309; }
+  .status-approved { background: #d1fae5; color: #047857; }
   .tag-admin { background: #ede9fe; color: #6d28d9; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; }
 
   .actions-cell {
@@ -230,17 +270,28 @@
   <div class="admin-header">
     <div class="admin-title">
       <h1>Platform Administration</h1>
-      <p>Verify companies and activate primary recruiter accounts.</p>
+      <p>Verify companies and review registered organizational accounts.</p>
     </div>
     <div style="display:flex; gap:10px;">
       <a href="/users/registration/" class="btn-action-sm" style="background:var(--admin-primary); color:#fff; text-decoration:none; display:flex; align-items:center;">+ Add Admin</a>
     </div>
   </div>
 
+  <!-- Filter Tabs -->
+  <div class="tab-group">
+    <button class="tab-btn active" id="tab-pending" onclick="switchTab('pending')">
+      ⏳ Pending Approvals
+      <span class="tab-badge" id="badge-pending">0</span>
+    </button>
+    <button class="tab-btn" id="tab-approved" onclick="switchTab('approved')">
+      ✅ Approved Companies
+      <span class="tab-badge" id="badge-approved">0</span>
+    </button>
+  </div>
+
   <div class="admin-card">
     <div class="card-toolbar">
-      <h2 style="font-size:1.1rem; font-weight:700;">Pending Company Approvals</h2>
-      <span class="badge-count" id="pending-count">0 Pending</span>
+      <h2 style="font-size:1.1rem; font-weight:700;" id="table-title">Pending Company Approvals</h2>
     </div>
 
     <div class="table-responsive">
@@ -251,14 +302,14 @@
             <th>Industry</th>
             <th>Primary Recruiter</th>
             <th>Location</th>
-            <th>Address</th>
+            <th>Status</th>
             <th>Registered At</th>
             <th style="text-align: right;">Action</th>
           </tr>
         </thead>
         <tbody id="approvals-table-body">
           <tr>
-            <td colspan="7" class="empty-state">Loading pending registrations...</td>
+            <td colspan="7" class="empty-state">Loading company listings...</td>
           </tr>
         </tbody>
       </table>
@@ -291,6 +342,14 @@
         <div class="modal-label">Address</div>
         <div class="modal-val" id="m-address"></div>
       </div>
+      <div>
+        <div class="modal-label">Status</div>
+        <div class="modal-val" id="m-status"></div>
+      </div>
+      <div>
+        <div class="modal-label">Registration No.</div>
+        <div class="modal-val" id="m-reg-no"></div>
+      </div>
       <div class="modal-grid-full" style="border-top:1px solid var(--neutral-200); padding-top:12px; margin-top:6px;">
         <h4 style="font-size:0.95rem; font-weight:700; color:var(--neutral-900); margin-bottom:8px;">Primary Recruiter</h4>
       </div>
@@ -304,7 +363,7 @@
       </div>
     </div>
 
-    <div style="display:flex; justify-content:flex-end; gap:8px; border-top:1px solid var(--neutral-200); padding-top:16px;">
+    <div style="display:flex; justify-content:flex-end; gap:8px; border-top:1px solid var(--neutral-200); padding-top:16px;" id="modal-actions-container">
       <button class="btn-action-sm btn-reject" id="m-btn-reject">Reject</button>
       <button class="btn-action-sm btn-approve" id="m-btn-approve">Approve & Activate</button>
     </div>
@@ -362,6 +421,7 @@
 
 <script>
   let cachedResults = [];
+  let currentTab = 'pending';
 
   function escapeHtml(text) {
     const map = {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'};
@@ -373,28 +433,42 @@
     if (el) el.textContent = value;
   }
 
-  async function loadPendingRecruiters() {
+  function switchTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(`tab-${tab}`).classList.add('active');
+    document.getElementById('table-title').textContent = tab === 'approved' ? 'Approved Companies' : 'Pending Company Approvals';
+    loadCompanies();
+  }
+
+  async function loadCompanies() {
     const tbody = document.getElementById('approvals-table-body');
+    tbody.innerHTML = `<tr><td colspan="7" class="empty-state">Loading ${currentTab} companies...</td></tr>`;
+
     try {
-      const res = await window.authFetch('/admin-module/api/v1/admin/pending-recruiters/');
+      // Uses the status query parameter
+      const res = await window.authFetch(`/admin-module/api/v1/admin/pending-recruiters/?status=${currentTab}`);
       if (!res.ok) {
         if (res.status === 403) {
           tbody.innerHTML = `<tr><td colspan="7" class="empty-state" style="color:var(--danger)">Access Denied. Only staff administrators can access this view.</td></tr>`;
           return;
         }
-        throw new Error('Failed to fetch approval list');
+        throw new Error('Failed to fetch companies');
       }
 
       const data = await res.json();
       cachedResults = data.results || [];
-      document.getElementById('pending-count').textContent = `${cachedResults.length} Pending`;
+
+      // Update counters if returned by the backend
+      if (data.pending_count !== undefined) setText('badge-pending', data.pending_count);
+      if (data.approved_count !== undefined) setText('badge-approved', data.approved_count);
 
       if (cachedResults.length === 0) {
         tbody.innerHTML = `
           <tr>
             <td colspan="7" class="empty-state">
-              <div style="font-size:2rem; margin-bottom:0.5rem;">🎉</div>
-              All recruiter company verification requests have been resolved!
+              <div style="font-size:2rem; margin-bottom:0.5rem;">${currentTab === 'approved' ? '🏢' : '🎉'}</div>
+              ${currentTab === 'approved' ? 'No approved companies found yet.' : 'All pending verification requests have been resolved!'}
             </td>
           </tr>
         `;
@@ -425,12 +499,21 @@
             </div>
           </td>
           <td>${escapeHtml(item.location || 'N/A')}</td>
-          <td>${escapeHtml(item.address || 'N/A')}</td>
+          <td>
+            ${item.is_verified 
+              ? `<span class="status-badge status-approved">Approved</span>`
+              : `<span class="status-badge status-pending">Pending</span>`
+            }
+          </td>
           <td style="white-space:nowrap;">${escapeHtml(item.company_created_at)}</td>
           <td class="actions-cell">
             <button class="btn-action-sm btn-view" onclick="openDetails('${item.company_id}')">Dossier</button>
-            <button class="btn-action-sm btn-approve" onclick="handleDecision('${item.company_id}', 'approve')">Approve</button>
-            <button class="btn-action-sm btn-reject" onclick="handleDecision('${item.company_id}', 'reject')">Reject</button>
+            ${!item.is_verified ? `
+              <button class="btn-action-sm btn-approve" onclick="handleDecision('${item.company_id}', 'approve')">Approve</button>
+              <button class="btn-action-sm btn-reject" onclick="handleDecision('${item.company_id}', 'reject')">Reject</button>
+            ` : `
+              <button class="btn-action-sm btn-reject" style="border-color:#fca5a5;" onclick="handleDecision('${item.company_id}', 'reject')">Revoke</button>
+            `}
           </td>
         </tr>
       `).join('');
@@ -450,12 +533,26 @@
     setText('m-registered-at', item.company_created_at || 'N/A');
     setText('m-location', item.location || 'N/A');
     setText('m-address', item.address || 'N/A');
+    setText('m-status', item.is_verified ? 'Verified & Active' : 'Pending Verification');
+    setText('m-reg-no', item.business_registration_number || 'N/A');
 
     setText('m-recruiter-name', item.recruiter_name || 'N/A');
     setText('m-recruiter-email', item.recruiter_email || 'N/A');
 
-    document.getElementById('m-btn-approve').onclick = () => { closeModal(); handleDecision(companyId, 'approve'); };
-    document.getElementById('m-btn-reject').onclick = () => { closeModal(); handleDecision(companyId, 'reject'); };
+    const actionsContainer = document.getElementById('modal-actions-container');
+    if (!item.is_verified) {
+      actionsContainer.innerHTML = `
+        <button class="btn-action-sm btn-reject" id="m-btn-reject">Reject</button>
+        <button class="btn-action-sm btn-approve" id="m-btn-approve">Approve & Activate</button>
+      `;
+      document.getElementById('m-btn-approve').onclick = () => { closeModal(); handleDecision(companyId, 'approve'); };
+      document.getElementById('m-btn-reject').onclick = () => { closeModal(); handleDecision(companyId, 'reject'); };
+    } else {
+      actionsContainer.innerHTML = `
+        <button class="btn-action-sm btn-reject" id="m-btn-reject">Revoke Verification</button>
+      `;
+      document.getElementById('m-btn-reject').onclick = () => { closeModal(); handleDecision(companyId, 'reject'); };
+    }
 
     document.getElementById('detail-modal').classList.add('active');
   }
@@ -487,7 +584,8 @@
   }
 
   async function handleDecision(companyId, decision) {
-    if (!confirm(`Are you sure you want to ${decision} this recruiter company account?`)) return;
+    const verb = decision === 'approve' ? 'approve' : 'revoke / reject';
+    if (!confirm(`Are you sure you want to ${verb} this company?`)) return;
 
     try {
       const res = await window.authFetch(`/admin-module/api/v1/admin/companies/${companyId}/verify/`, {
@@ -496,9 +594,7 @@
       });
 
       if (res.ok) {
-        const row = document.getElementById(`row-${companyId}`);
-        if (row) row.remove();
-        loadPendingRecruiters();
+        loadCompanies();
       } else {
         const data = await res.json();
         alert(data.error || 'Operation failed.');
@@ -510,7 +606,7 @@
 
   document.addEventListener('DOMContentLoaded', async () => {
     await window.authCheckPromise;
-    loadPendingRecruiters();
+    loadCompanies();
   });
 </script>
 {% endblock %}

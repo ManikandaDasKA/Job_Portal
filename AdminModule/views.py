@@ -15,10 +15,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 class PendingRecruiterCompaniesView(APIView):
-    """
-    Returns full details of all companies awaiting admin verification,
-    along with the primary recruiter/creator details from the Recruiter model.
-    """
+    
     authentication_classes = [CustomJWTAuthentication]
     permission_classes = [IsAuthenticated, IsAdminUserRole]
 
@@ -78,6 +75,56 @@ class PendingRecruiterCompaniesView(APIView):
             logger.error(f"Failed to retrieve pending companies: {str(e)}", exc_info=True)
             return Response({"error": "Failed to retrieve pending companies."},
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class AdminCompanyDetailView(APIView):
+
+    authentication_classes = [CustomJWTAuthentication]
+    permission_classes = [IsAuthenticated, IsAdminUserRole]
+
+    def get(self, request):
+        try:
+            company = Company.objects.filter(is_verified=False).prefetch_related('recruiters__user').first()
+
+            if not company:
+                return Response({"error": "Company not found or already verified."}, status=status.HTTP_404_NOT_FOUND)
+
+            primary_recruiter = (
+                company.recruiters.filter(is_admin=True).first()
+                or company.recruiters.first()
+            )
+            recruiter_user = primary_recruiter.user if primary_recruiter else None
+
+            result = {
+                "company_id": getattr(company, 'company_id', getattr(company, 'id', None)),
+                "company_name": getattr(company, 'name', 'N/A'),
+                "industry": getattr(company, 'industry', 'N/A'),
+                "company_email": getattr(company, 'email', getattr(company, 'contact_email', 'N/A')),
+                "location": getattr(company, 'location', 'N/A'),
+                "address": getattr(company, 'address', 'N/A'),
+                "description": getattr(company, 'description', ''),
+                "is_verified": company.is_verified,
+                "company_created_at": (
+                    company.created_at.strftime("%Y-%m-%d %H:%M:%S")
+                    if getattr(company, 'created_at', None) else "N/A"
+                ),
+
+                "recruiter_id": primary_recruiter.recruiter_id if primary_recruiter else None,
+                "recruiter_user_id": (
+                    getattr(recruiter_user, 'user_id', recruiter_user.pk) if recruiter_user else None
+                ),
+                "recruiter_name": primary_recruiter.full_name if primary_recruiter else "N/A",
+                "recruiter_email": (
+                    getattr(recruiter_user, 'user_email', getattr(recruiter_user, 'email', 'N/A'))
+                    if recruiter_user else "N/A"
+                ),
+                "recruiter_phone": primary_recruiter.phone_number if primary_recruiter else "N/A",
+                "recruiter_designation": primary_recruiter.designation if primary_recruiter else "N/A",
+            }
+
+            return Response(result, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class AdminCompanyVerifyActionView(APIView):
     authentication_classes = [CustomJWTAuthentication]

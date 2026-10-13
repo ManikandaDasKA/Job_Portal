@@ -23,7 +23,7 @@ class NotificationListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
         # ✅ FIXED: Changed "id" to "notification_id" to match your actual model field
-        fields = ["notification_id", "message", "time"]
+        fields = ["notification_id", "message", "time", "is_read"]
 
     def get_time(self, obj):
         return format_human_readable_time(obj.created_at)

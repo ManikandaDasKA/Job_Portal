@@ -92,9 +92,9 @@
             <button type="submit" id="submit-btn" class="btn-submit">Sign In</button>
         </form>
         
-        <div style="text-align: center; margin-top: 16px;">
-            <a href="/users/registration/" style="color: #4f46e5; font-size: 0.875rem; text-decoration: none;">
-                Don't have an account? Sign up
+        <div style="text-align: center; margin-top: 16px; font-size: 0.875rem;">
+            Don't have an account?<a href="/users/registration/" style="color: #4f46e5; font-size: 0.875rem; text-decoration: none;">
+                Sign up
             </a>
         </div>
     </div>
@@ -114,13 +114,14 @@
 
         const email = document.getElementById('id_email').value;
         const password = document.getElementById('id_password').value;
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
 
         try {
             const response = await fetch('/users/login-test/', {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': window.getCookie('csrftoken')
+                    'X-CSRFToken': csrfToken
                 },
                 body: JSON.stringify({ email, password })
             });
@@ -128,19 +129,21 @@
             const data = await response.json();
 
             if (response.ok) {
-                // 1. Assign the short-lived access token directly to RAM space
-                window.accessToken = data.access;
+                // 1. Store tokens persistently so the dashboard can access them
+                localStorage.setItem('access_token', data.access || data.token);
+                if (data.refresh) {
+                    localStorage.setItem('refresh_token', data.refresh);
+                }
                 
-                // Keep minimal layout info in localStorage if needed, but NEVER tokens
                 localStorage.setItem('user_email', email);
 
-                // 2. Relocate to main interface
                 window.location.href = '/users/dashboard/';
             } else {
-                errorBox.innerText = data.detail || 'Login failed. Please check your credentials.';
+                errorBox.innerText = data.detail || data.error || 'Login failed. Please check your credentials.';
                 errorBox.style.display = 'block';
             }
         } catch (err) {
+            console.error('Login error:', err);
             errorBox.innerText = 'Server connection error. Please try again later.';
             errorBox.style.display = 'block';
         } finally {
